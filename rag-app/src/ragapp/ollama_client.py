@@ -1,6 +1,6 @@
 """Thin client for Ollama's own API: embeddings and the guardrail model.
 
-Talks to Ollama directly (127.0.0.1:11434, loopback-only) rather
+Talks to Ollama directly (OLLAMA_BASE_URL, 127.0.0.1:11434 by default) rather
 than through the LiteLLM gateway for these two calls: embeddings and safety
 classification aren't end-user chat completions, and keeping them off the
 gateway's virtual-key/budget accounting keeps that accounting meaningful for

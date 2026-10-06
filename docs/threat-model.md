@@ -12,7 +12,7 @@ caller --[virtual key]--> LiteLLM gateway (tailnet address <LLM_HOST tailnet IP>
                                +--> Ollama (tailnet address <LLM_HOST tailnet IP>:11434): gemma4:e2b, qwen3.8, deepseek-v3
 ```
 
-Postgres is loopback-bound. The gateway and Ollama are bound to LLM_HOST's Tailscale address only (changed 2026-10-06 so the CI runner `CI_RUNNER` can reach them for the live red-team); they are not bound to `0.0.0.0` or the LAN. Tailscale ACLs allow `tag:ci` (the CI runner) and `tag:admin` (the maintainer's devices) to reach `tag:llm-host` on ports 4000 and 11434 only. **Ollama has no authentication of its own**, so on the tailnet its protection is that ACL, not a key: any node the ACL admits to 11434 can use models and embeddings directly, bypassing the gateway's virtual-key limits. The earlier loopback-only claim (direct probes to LLM_HOST's LAN IP refused, 2026-09-29) predates this change and has **not been re-verified** for the new bindings. SSH to LLM_HOST is key-only, no passwordless sudo.
+Postgres is loopback-bound. The gateway and Ollama are bound to LLM_HOST's Tailscale address only (changed 2026-10-06 so the CI runner `CI_RUNNER` can reach them for the live red-team); they are not bound to `0.0.0.0` or the LAN. Tailscale ACLs allow `tag:ci` (the CI runner) and `tag:admin` (the maintainer's devices) to reach `tag:llm-host` on ports 4000 and 11434 only. **Ollama has no authentication of its own**, so on the tailnet its protection is that ACL, not a key: any node the ACL admits to 11434 can use models and embeddings directly, bypassing the gateway's virtual-key limits. A probe from LAN machines outside the tailnet found both ports unreachable (maintainer check, 2026-10-06); the earlier loopback-only probe (2026-09-29) covered the previous bindings. SSH to LLM_HOST is key-only, no passwordless sudo.
 
 ## OWASP Top 10 for LLM Applications (2025)
 
@@ -35,7 +35,7 @@ Tactic names below are the stable, documented ATLAS categories. Where I'd cite a
 
 | Tactic | Relevance to this system | Current control |
 |--------|---------------------------|------------------|
-| Reconnaissance | Network-level scanning for the service | Mitigated: loopback-only binding means LAN/network recon can't even discover the endpoints. Verified live (connection refused from outside LLM_HOST). |
+| Reconnaissance | Network-level scanning for the service | Mitigated: the gateway and Ollama listen on the host's Tailscale address only, and Tailscale ACLs limit which nodes can reach them, so LAN and internet scanning does not find the endpoints. Checked 2026-10-06: not reachable from LAN machines outside the tailnet. |
 | Initial Access | Reaching LLM_HOST itself | Key-only SSH, no passwordless sudo, perimeter control, not ML-specific, but it's what everything else sits behind. |
 | ML Model Access | Reaching the model without authorization | Mitigated: virtual-key auth required; verified live (invalid key → HTTP 401). Master key never leaves LLM_HOST's `.env`. |
 | Discovery | Enumerating other keys, models, or config | Admin endpoints (`/spend/logs`, `/key/*`) require the master key. Not independently verified this session whether a valid *virtual* key can enumerate anything beyond its own scope, flagged as a follow-up probe, not yet confirmed either way. |

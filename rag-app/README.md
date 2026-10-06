@@ -6,7 +6,7 @@ A small RAG pipeline demonstrating three controls: retrieval-time ACL enforcemen
 
 ```
 question --[guardrail: input]--> embed --> pgvector search
-                                              (ACL filter in the SQL WHERE)
+                                              (ACL: RLS scope role + SQL WHERE)
                                               |
                                               v
                                        redact (Presidio)
@@ -21,7 +21,7 @@ question --[guardrail: input]--> embed --> pgvector search
                                       guardrail: output
 ```
 
-Uses the same Postgres instance the gateway deployed (`pgvector/pgvector:pg16`, dedicated `ragapp` database, not a schema inside `litellm`'s own DB, separate credentials; the gateway connects as a superuser role, so the separation holds in one direction only). The query path connects as the read-only `ragapp_query` role (`RAGAPP_QUERY_DATABASE_URL`, created by `sql/roles.sql`); ingestion connects as the owner role (`RAGAPP_DATABASE_URL`). Generation calls route through the existing gateway with a dedicated virtual key, so they're authenticated, rate-limited, budgeted, and audit-logged like any other caller, embeddings and guardrail classification call Ollama directly, since neither is an end-user generation.
+Uses the same Postgres instance the gateway deployed (`pgvector/pgvector:pg16`, dedicated `ragapp` database, not a schema inside `litellm`'s own DB, separate credentials; the gateway role cannot connect to the `ragapp` database and the RAG roles cannot connect to the `litellm` database). The query path connects as the read-only `ragapp_query` role (`RAGAPP_QUERY_DATABASE_URL`, created by `sql/roles.sql`); ingestion connects as the owner role (`RAGAPP_DATABASE_URL`). Row-level security on `chunks` limits each query to the caller's scope role (`rag_scope_public`, `rag_scope_internal` or `rag_scope_restricted`, chosen from the user's `allowed_acl`); `sql/roles.sql` creates the roles and policies and must be re-run after `chunks` is dropped and re-created. Generation calls route through the existing gateway with a dedicated virtual key, so they're authenticated, rate-limited, budgeted, and audit-logged like any other caller, embeddings and guardrail classification call Ollama directly, since neither is an end-user generation.
 
 ## Corpus and simulated users
 

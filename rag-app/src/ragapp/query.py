@@ -63,6 +63,13 @@ def query(corpus_dir: Path, username: str, question: str) -> QueryResult:
         log_event(level="WARNING", event="unknown_user", username=username[:128])
         raise ValueError(f"unknown user: {username}")
     allowed_acl = users[username]["allowed_acl"]
+    # A scope with no scope role (db.SCOPE_ROLES) fails here, before the
+    # guardrail model, the embedding call or the database are used.
+    try:
+        db.scope_role(allowed_acl)
+    except db.UnknownScopeError:
+        log_event(level="ERROR", event="unknown_scope", username=username, acl_scope=allowed_acl)
+        raise
 
     # Guardrail check on the INPUT first, before spending a retrieval/generation
     # call on something flagged unsafe.

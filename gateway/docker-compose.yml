@@ -49,7 +49,9 @@ services:
     network_mode: host
     environment:
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://127.0.0.1:11434}
-      DATABASE_URL: postgresql://${POSTGRES_USER:-litellm}:${POSTGRES_PASSWORD}@127.0.0.1:5432/${POSTGRES_DB:-litellm}
+      # LiteLLM connects as the non-superuser gateway_app role (gateway/sql/gateway-role.sql),
+      # not as the Postgres bootstrap superuser in POSTGRES_USER.
+      DATABASE_URL: postgresql://${GATEWAY_DB_USER:?set GATEWAY_DB_USER in .env}:${GATEWAY_DB_PASSWORD:?set GATEWAY_DB_PASSWORD in .env}@127.0.0.1:5432/${POSTGRES_DB:-litellm}
     volumes:
       - ./litellm_config.yaml:/app/config.yaml:ro
     command:

@@ -15,6 +15,12 @@
 // role, the query CLI runs as that role, and direct SQL checks show it cannot
 // write (INSERT/UPDATE/DELETE/TRUNCATE, CREATE TABLE, CREATE TEMP TABLE).
 //
+// Row-level security: roles.sql enables RLS on chunks with one policy per
+// scope role (rag_scope_public/internal/restricted). Direct SQL checks show
+// ragapp_query reads zero rows without SET ROLE, each scope role sees exactly
+// its acl values, ragapp_query cannot SET ROLE outside the scope roles, and a
+// re-ingest keeps the policies.
+//
 // Fail-loud: every check names a positive control or an exact expectation, and
 // the run fails if fewer than EXPECTED_CHECKS checks executed.
 
@@ -34,7 +40,7 @@ const PG_CONTAINER = process.env.RAGAPP_PG_CONTAINER;
 const PSQL = process.env.PSQL ?? "psql";
 const GATEWAY_KEY = "sk-ci-test-key";
 const EMBED_DIM = 768;
-const EXPECTED_CHECKS = 32;
+const EXPECTED_CHECKS = 45;
 const UNSAFE_TRIGGER = "UNSAFE-TRIGGER";
 const DB_TIMEOUT_MS = 15_000;
 const PSQL_TIMEOUT_MS = 60_000;
@@ -216,7 +222,20 @@ async function expectSqlState(run: () => Promise<unknown>, code: string, denied:
   }
 }
 
-// ragapp_query attributes and the ACLs roles.sql manages. rolpassword is not
+// Scope roles from roles.sql and the acl values each one's policy admits
+// (sorted). The app maps users to these in rag-app/src/ragapp/db.py.
+const SCOPES = [
+  { role: "rag_scope_public", acl: ["public"] },
+  { role: "rag_scope_internal", acl: ["internal", "public"] },
+  { role: "rag_scope_restricted", acl: ["internal", "public", "restricted"] },
+] as const;
+const SCOPE_ROLE_NAMES: string[] = SCOPES.map((s) => s.role);
+// Postgres array literal for query parameters (Bun SQL sends a JS array as a
+// comma-separated string, which ::text[] rejects).
+const SCOPE_ROLES_PG = `{${SCOPE_ROLE_NAMES.join(",")}}`;
+
+// ragapp_query and scope-role attributes, memberships, the ACLs roles.sql
+// manages, and the RLS flag and policies on chunks. rolpassword is not
 // selected (each ALTER ROLE ... PASSWORD writes a new salt).
 async function privilegeSnapshot(sql: SQL) {
   const rows = await bounded(sql`
@@ -225,11 +244,35 @@ async function privilegeSnapshot(sql: SQL) {
            (SELECT relacl::text FROM pg_class WHERE oid = to_regclass('public.chunks')) AS chunks_acl,
            (SELECT datacl::text FROM pg_database WHERE datname = current_database()) AS database_acl,
            (SELECT nspacl::text FROM pg_namespace WHERE nspname = 'public') AS schema_acl,
-           (SELECT extversion FROM pg_extension WHERE extname = 'vector') AS vector_version
+           (SELECT extversion FROM pg_extension WHERE extname = 'vector') AS vector_version,
+           (SELECT format('%s|%s', relrowsecurity, relforcerowsecurity)
+              FROM pg_class WHERE oid = to_regclass('public.chunks')) AS chunks_rls,
+           (SELECT string_agg(format('%s|%s|%s|%s|%s|%s', p.policyname, p.permissive, p.cmd, p.roles, p.qual, p.with_check), ';' ORDER BY p.policyname)
+              FROM pg_policies p WHERE p.schemaname = 'public' AND p.tablename = 'chunks') AS chunks_policies,
+           (SELECT string_agg(format('%s|%s|%s|%s', g.rolname, a.admin_option, a.inherit_option, a.set_option), ';' ORDER BY g.rolname)
+              FROM pg_auth_members a JOIN pg_roles g ON g.oid = a.roleid WHERE a.member = r.oid) AS memberships,
+           (SELECT string_agg(format('%s|%s|%s|%s|%s|%s|%s|%s', s.rolname, s.rolcanlogin, s.rolsuper, s.rolcreatedb,
+                                     s.rolcreaterole, s.rolreplication, s.rolbypassrls, s.rolinherit), ';' ORDER BY s.rolname)
+              FROM pg_roles s WHERE s.rolname = ANY(${SCOPE_ROLES_PG}::text[])) AS scope_roles
     FROM pg_roles r WHERE r.rolname = 'ragapp_query'`, "privilege snapshot");
   if (rows.length !== 1) throw new Error(`ragapp_query role not found (rows=${rows.length})`);
   return rows[0] as Record<string, unknown>;
 }
+
+// Runs `run` in one transaction after SET LOCAL ROLE to a scope role. The role
+// name comes from SCOPES only.
+function asScope<T>(sql: SQL, role: string, run: (tx: SQL) => Promise<T>): Promise<T> {
+  if (!SCOPE_ROLE_NAMES.includes(role)) throw new Error(`asScope: ${role} is not a scope role`);
+  return bounded(
+    sql.begin(async (tx) => {
+      await tx.unsafe(`SET LOCAL ROLE ${role}`);
+      return await run(tx as unknown as SQL);
+    }) as Promise<T>,
+    `as ${role}`,
+  );
+}
+
+const sortedAcl = (rows: { acl: string }[]) => rows.map((r) => r.acl).sort();
 
 // Valid for the owner: every NOT NULL column set, 768-dim vector literal. The
 // explicit id skips nextval(), so the only privilege tested is INSERT on chunks.
@@ -277,6 +320,39 @@ try {
   check("query role: LOGIN, not superuser, no CREATEDB/CREATEROLE/REPLICATION/BYPASSRLS", after.rolcanlogin === true && after.rolsuper === false && after.rolcreatedb === false && after.rolcreaterole === false && after.rolreplication === false && after.rolbypassrls === false, JSON.stringify(after));
   const rolconfig = after.rolconfig;
   check("query role: default_transaction_read_only=on is set on the role", Array.isArray(rolconfig) && rolconfig.length === 1 && rolconfig[0] === "default_transaction_read_only=on", `rolconfig=${JSON.stringify(rolconfig)}`);
+
+  // ---------- row-level security: catalog state ----------
+  const [rls] = await bounded(ownerSql`
+    SELECT relrowsecurity, relforcerowsecurity FROM pg_class WHERE oid = to_regclass('public.chunks')`, "RLS flag");
+  check("RLS: chunks has row level security enabled and not forced (owner and superusers bypass)", rls?.relrowsecurity === true && rls?.relforcerowsecurity === false, JSON.stringify(rls));
+
+  const policies = (await bounded(ownerSql`
+    SELECT policyname, permissive, cmd, roles::text AS roles, qual, with_check
+    FROM pg_policies WHERE schemaname = 'public' AND tablename = 'chunks' ORDER BY policyname`, "policies")) as Record<string, unknown>[];
+  const expectedPolicies = [
+    { policyname: "chunks_scope_internal", permissive: "PERMISSIVE", cmd: "SELECT", roles: "{rag_scope_internal}", qual: "(acl = ANY (ARRAY['public'::text, 'internal'::text]))", with_check: null },
+    { policyname: "chunks_scope_public", permissive: "PERMISSIVE", cmd: "SELECT", roles: "{rag_scope_public}", qual: "(acl = 'public'::text)", with_check: null },
+    { policyname: "chunks_scope_restricted", permissive: "PERMISSIVE", cmd: "SELECT", roles: "{rag_scope_restricted}", qual: "(acl = ANY (ARRAY['public'::text, 'internal'::text, 'restricted'::text]))", with_check: null },
+  ];
+  check("RLS: chunks has exactly the three scope policies (permissive, FOR SELECT, one scope role each, expected acl sets)", JSON.stringify(policies) === JSON.stringify(expectedPolicies), JSON.stringify(policies));
+
+  const scopeAttrs = (await bounded(ownerSql`
+    SELECT rolname, rolcanlogin, rolsuper, rolcreatedb, rolcreaterole, rolreplication, rolbypassrls
+    FROM pg_roles WHERE rolname = ANY(${SCOPE_ROLES_PG}::text[]) ORDER BY rolname`, "scope role attributes")) as Record<string, unknown>[];
+  check("scope roles: all three exist, NOLOGIN, not superuser, no CREATEDB/CREATEROLE/REPLICATION/BYPASSRLS", scopeAttrs.length === 3 && scopeAttrs.every((r) => r.rolcanlogin === false && r.rolsuper === false && r.rolcreatedb === false && r.rolcreaterole === false && r.rolreplication === false && r.rolbypassrls === false), JSON.stringify(scopeAttrs));
+
+  const members = (await bounded(ownerSql`
+    SELECT g.rolname, a.admin_option, a.inherit_option, a.set_option
+    FROM pg_auth_members a JOIN pg_roles g ON g.oid = a.roleid JOIN pg_roles m ON m.oid = a.member
+    WHERE m.rolname = 'ragapp_query' ORDER BY g.rolname`, "ragapp_query memberships")) as Record<string, unknown>[];
+  check("scope roles: ragapp_query is a member of each with SET, without INHERIT or ADMIN, and of no other role", members.length === 3 && JSON.stringify(members.map((r) => r.rolname)) === JSON.stringify([...SCOPE_ROLE_NAMES].sort()) && members.every((r) => r.set_option === true && r.inherit_option === false && r.admin_option === false), JSON.stringify(members));
+
+  const scopePrivs = (await bounded(ownerSql`
+    SELECT r AS role, p, has_table_privilege(r, 'public.chunks', p) AS granted
+    FROM unnest(${SCOPE_ROLES_PG}::text[]) AS r,
+         unnest(ARRAY['SELECT', 'INSERT', 'UPDATE', 'DELETE', 'TRUNCATE', 'REFERENCES', 'TRIGGER']) AS p`, "scope role table privileges")) as { role: string; p: string; granted: boolean }[];
+  const scopeGranted = scopePrivs.filter((r) => r.granted === true).map((r) => `${r.role}:${r.p}`).sort();
+  check("scope roles: privileges on chunks are SELECT only", scopePrivs.length === 21 && scopePrivs.every((r) => typeof r.granted === "boolean") && JSON.stringify(scopeGranted) === JSON.stringify(SCOPE_ROLE_NAMES.map((r) => `${r}:SELECT`).sort()), `granted=${scopeGranted} rows=${scopePrivs.length}`);
 
   const tablePrivs = (await bounded(ownerSql`
     SELECT p, has_table_privilege('ragapp_query', 'public.chunks', p) AS granted
@@ -342,15 +418,41 @@ try {
   // pass on a connection that never worked.
   querySql = new SQL({ url: QUERY_URL, max: 1, connectionTimeout: 15 });
   const qsql = querySql;
+  // With RLS, ragapp_query reads chunks only after SET ROLE to a scope role, so
+  // the positive control reads through the widest scope role.
   let readable: number | string = "no result";
   try {
-    const [row] = await bounded(qsql`SELECT count(*)::int AS n FROM chunks`, "positive control");
+    const [row] = await asScope(qsql, "rag_scope_restricted", (tx) => tx`SELECT count(*)::int AS n FROM chunks`);
     readable = row.n as number;
   } catch (e) {
     readable = e instanceof Error ? e.message : String(e);
   }
-  check("query role: positive control, connects and reads chunks (4 rows)", readable === 4, `result=${readable}`);
+  check("query role: positive control, connects and reads all 4 chunks after SET LOCAL ROLE rag_scope_restricted", readable === 4, `result=${readable}`);
   if (readable === 4) {
+    // Runs after the scope transaction above committed: SET LOCAL has ended,
+    // so this is ragapp_query with no role switch.
+    const [deny] = await bounded(qsql`SELECT current_user AS who, count(*)::int AS n FROM chunks`, "default deny");
+    check("RLS default deny: ragapp_query without a role switch reads 0 rows (the scope role reads 4)", deny.who === "ragapp_query" && deny.n === 0, JSON.stringify(deny));
+
+    for (const { role, acl } of SCOPES) {
+      const seen = sortedAcl((await asScope(qsql, role, (tx) => tx`SELECT DISTINCT acl FROM chunks`)) as { acl: string }[]);
+      check(`RLS: ${role} sees exactly acl ${JSON.stringify(acl)}`, JSON.stringify(seen) === JSON.stringify(acl), `seen=${JSON.stringify(seen)}`);
+    }
+
+    // The query names the higher tiers; the policy still hides them. The owner
+    // counts are the positive control: those rows exist.
+    const [ownerTiers] = await bounded(ownerSql`
+      SELECT count(*) FILTER (WHERE acl = 'internal')::int AS internal,
+             count(*) FILTER (WHERE acl = 'restricted')::int AS restricted FROM chunks`, "owner tier counts");
+    const [pubHigher] = await asScope(qsql, "rag_scope_public", (tx) => tx`SELECT count(*)::int AS n FROM chunks WHERE acl IN ('internal', 'restricted')`);
+    const [intHigher] = await asScope(qsql, "rag_scope_internal", (tx) => tx`SELECT count(*)::int AS n FROM chunks WHERE acl = 'restricted'`);
+    check("RLS: a scope role cannot read a higher tier when the query asks for it (public: internal+restricted 0, internal: restricted 0)", ownerTiers.internal > 0 && ownerTiers.restricted > 0 && pubHigher.n === 0 && intHigher.n === 0, `owner=${JSON.stringify(ownerTiers)} public=${pubHigher.n} internal=${intHigher.n}`);
+
+    const ownerRole = decodeURIComponent(ownerUrl.username).replace(/"/g, '""');
+    const setOwner = await expectSqlState(() => qsql.begin(async (tx) => { await tx.unsafe(`SET LOCAL ROLE "${ownerRole}"`); }), "42501", /permission denied to set role/);
+    const setReadAll = await expectSqlState(() => qsql.begin(async (tx) => { await tx.unsafe("SET LOCAL ROLE pg_read_all_data"); }), "42501", /permission denied to set role/);
+    check("SET ROLE: ragapp_query cannot switch to the owner role or pg_read_all_data (42501)", setOwner.ok && setReadAll.ok, `owner: ${setOwner.detail}; pg_read_all_data: ${setReadAll.detail}`);
+
     const [ro] = await bounded(qsql`SHOW transaction_read_only`, "SHOW transaction_read_only");
     check("query role: session starts read-only (transaction_read_only=on from the role default)", ro.transaction_read_only === "on", JSON.stringify(ro));
 
@@ -372,7 +474,28 @@ try {
       const r = await expectSqlState(run, "42501", denied);
       check(`privileges: ragapp_query cannot ${what} (42501)`, r.ok, r.detail);
     }
+
+    const scopeInsert = await expectSqlState(() => asScope(qsql, "rag_scope_restricted", (tx) => insertRow(tx)), "42501", onChunks);
+    check("privileges: after SET ROLE rag_scope_restricted, INSERT into chunks still fails (42501)", scopeInsert.ok, scopeInsert.detail);
   }
+
+  // Re-ingest empties chunks with TRUNCATE; RLS, policies, grants and
+  // memberships must survive it, and the scope roles must still read the rows.
+  const beforeReingest = await privilegeSnapshot(ownerSql);
+  const reingest = await runCli(["ingest"], "owner");
+  const afterReingest = await privilegeSnapshot(ownerSql);
+  let reingestCounts = "no result";
+  if (querySql) {
+    const q = querySql;
+    try {
+      const [scoped] = await asScope(q, "rag_scope_restricted", (tx) => tx`SELECT count(*)::int AS n FROM chunks`);
+      const [unscoped] = await bounded(q`SELECT count(*)::int AS n FROM chunks`, "unscoped count after re-ingest");
+      reingestCounts = `${scoped.n}/${unscoped.n}`;
+    } catch (e) {
+      reingestCounts = e instanceof Error ? e.message : String(e);
+    }
+  }
+  check("re-ingest: keeps RLS, policies, grants and memberships unchanged (restricted scope reads 4, no role switch reads 0)", reingest.code === 0 && /Ingested 4 documents/.test(reingest.out) && afterReingest.chunks_rls === "t|f" && JSON.stringify(beforeReingest) === JSON.stringify(afterReingest) && reingestCounts === "4/0", `code=${reingest.code} counts=${reingestCounts} before=${JSON.stringify(beforeReingest)} after=${JSON.stringify(afterReingest)} err=${reingest.err.slice(-300)}`);
 
   const [remaining] = await bounded(ownerSql`SELECT count(*)::int AS n FROM chunks`, "chunk count");
   check("chunks unchanged after the negative checks (4 rows)", remaining.n === 4, `rows=${remaining.n}`);

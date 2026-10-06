@@ -12,8 +12,16 @@ Requires Docker + Docker Compose. Not installed on this dev machine by design; t
 
 ```bash
 cp .env.example .env
-# Edit .env: generate new values for LITELLM_MASTER_KEY, LITELLM_SALT_KEY, POSTGRES_PASSWORD
+# Edit .env: generate new values for LITELLM_MASTER_KEY, LITELLM_SALT_KEY, POSTGRES_PASSWORD,
+# GATEWAY_DB_PASSWORD
 #   openssl rand -hex 32   (run twice, once per key)
+#   openssl rand -hex 24   (database passwords)
+
+# Postgres first, then the role LiteLLM connects as (psql 15+ runs inside the container):
+docker compose up -d postgres
+set -a; . ./.env; set +a
+docker compose exec -T -e GATEWAY_DB_PASSWORD postgres \
+  sh -c 'psql -X -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d postgres -f -' < sql/gateway-role.sql
 
 docker compose up -d
 docker compose logs -f litellm   # confirm it comes up healthy

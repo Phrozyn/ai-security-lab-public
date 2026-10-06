@@ -1,0 +1,27 @@
+title: RAG App Input Guardrail Blocked a Query
+id: 4cc74d20-1b78-4624-96c6-af2b31c21db2
+status: experimental
+description: >
+  Detects Llama Guard classifying a user's question as unsafe before
+  retrieval/generation ran. One hit may be a user testing boundaries;
+  repeated hits from the same username are worth an analyst looking at who
+  this simulated identity maps to and why.
+x-fixtures:
+  - ../samples/ragapp_audit.jsonl
+author: Phrozyn
+date: '2026-10-01'
+logsource:
+  product: ragapp
+  service: query-audit
+detection:
+  selection:
+    event: input_guardrail_blocked
+  condition: selection
+fields:
+  - username
+  - input_verdict
+level: medium
+falsepositives:
+  - Deliberate red-team/guardrail testing of the deployed safety model (as used to generate this rule's own fixture)
+tags:
+  - attack.initial-access

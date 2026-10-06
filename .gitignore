@@ -1,0 +1,10 @@
+.env
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+*.log
+*.jsonl
+!detections/samples/*.jsonl
+.DS_Store
+ISA.md

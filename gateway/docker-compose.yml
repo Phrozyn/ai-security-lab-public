@@ -1,0 +1,72 @@
+services:
+  postgres:
+    # Images are pinned by digest (the tag is kept for readability only; Docker
+    # resolves the digest). Pins are the digests actually running on LLM_HOST as of
+    # 2026-10-05; CI fails if any image here lacks a digest. To update: bump the
+    # digest in a PR and let the Trivy/Grype gates run on it.
+    # pgvector/pgvector:pg16 is upstream Postgres 16 with the pgvector extension
+    # compiled in — same on-disk format as postgres:16-alpine, so swapping the
+    # image doesn't require touching the existing data volume. Used for both
+    # LiteLLM's own DB (litellm) and the RAG app's vector store (ragapp, created
+    # separately) rather than standing up a second database server.
+    image: pgvector/pgvector:pg16@sha256:ccc6e83d6e35e931dc7c5def2022729d5a6c370318d099181995567ff1fb4d6b
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-litellm}
+      POSTGRES_USER: ${POSTGRES_USER:-litellm}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set a real password in .env}
+    volumes:
+      - litellm-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-litellm} -d ${POSTGRES_DB:-litellm}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    ports:
+      # Loopback-only. litellm reaches this over 127.0.0.1, not the bridge network's
+      # service-name DNS, because litellm below runs in host network mode (see why
+      # in that service's comment) — so this container needs an explicit loopback
+      # path in instead of relying on being on the same compose network.
+      - "127.0.0.1:5432:5432"
+
+  litellm:
+    image: ghcr.io/berriai/litellm:main-stable@sha256:625981c83410a3ea68eb0697590a57ec1d764d634514d54fa5db0591077ee839
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - .env
+    # Host networking, not the default bridge: Ollama is bound to the HOST's
+    # 127.0.0.1:11434 only (by design — see repo root README, "Ollama exposure").
+    # A bridge-network container's gateway IP is not the same as the host's
+    # loopback, so a normal container here would get connection-refused talking
+    # to Ollama. Host networking puts litellm in the host's own network
+    # namespace, so 127.0.0.1 inside the container really is the host's loopback.
+    # This also means litellm's own bind address is no longer enforced by Docker's
+    # port-publish mechanism — hence the explicit `--host 127.0.0.1` below, so the
+    # gateway itself doesn't end up LAN-reachable as a side effect of this change.
+    network_mode: host
+    environment:
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://127.0.0.1:11434}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-litellm}:${POSTGRES_PASSWORD}@127.0.0.1:5432/${POSTGRES_DB:-litellm}
+    volumes:
+      - ./litellm_config.yaml:/app/config.yaml:ro
+    command:
+      ["--config", "/app/config.yaml", "--port", "${LITELLM_PORT:-4000}", "--host", "${LITELLM_BIND_ADDR:-127.0.0.1}"]
+    healthcheck:
+      # The main-stable image has no wget/curl — only its own Python venv.
+      # urllib avoids adding a dependency just for the healthcheck.
+      test:
+        [
+          "CMD",
+          "python3",
+          "-c",
+          "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://${LITELLM_BIND_ADDR:-127.0.0.1}:${LITELLM_PORT:-4000}/health/liveliness', timeout=3).status == 200 else 1)",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  litellm-db:

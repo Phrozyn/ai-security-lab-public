@@ -1,0 +1,29 @@
+title: Anomalous Request Volume From a Single Gateway Virtual Key
+id: dcf3c8c4-a140-401d-869d-e29b6bf1b66b
+status: experimental
+description: >
+  Flags a single virtual key making an unusually high number of
+  chat-completion calls in a short window -- consistent with automated
+  scraping, a leaked key being hammered by a script, or bulk data
+  exfiltration via many small queries rather than one large one. Threshold
+  (30 in 5 minutes) is a starting point for this lab's low-traffic demo
+  corpus, not a production-tuned baseline -- a real deployment would derive
+  it from observed per-key traffic over a baseline period.
+x-fixtures:
+  - ../samples/gateway_spend_logs.jsonl
+author: Phrozyn
+date: '2026-10-01'
+correlation:
+  type: event_count
+  rules:
+    - litellm_completion_request
+  group-by:
+    - user_api_key_alias
+  timespan: 5m
+  condition:
+    gte: 30
+level: medium
+falsepositives:
+  - A legitimate batch job or load test using the same key
+tags:
+  - attack.exfiltration

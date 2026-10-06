@@ -1,0 +1,27 @@
+title: Repeated LiteLLM Gateway Authentication Failures
+id: 716af5e5-965d-4cc0-ad18-df2b2345263a
+status: experimental
+description: >
+  Flags several authentication failures from the same source in a short
+  window -- consistent with credential stuffing or a script brute-forcing a
+  virtual key, as opposed to one caller's stale key. Threshold (5 in 5
+  minutes) is a starting point for this lab's low-traffic demo, not a
+  production-tuned baseline.
+x-fixtures:
+  - ../samples/gateway_auth_failure.jsonl
+author: Phrozyn
+date: '2026-10-01'
+correlation:
+  type: event_count
+  rules:
+    - litellm_auth_failure
+  group-by:
+    - requester_ip
+  timespan: 5m
+  condition:
+    gte: 5
+level: high
+falsepositives:
+  - A client retry loop hammering the gateway with the same stale key instead of backing off
+tags:
+  - attack.credential-access

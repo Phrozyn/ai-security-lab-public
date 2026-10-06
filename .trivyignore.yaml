@@ -1,0 +1,28 @@
+# Time-boxed exceptions for the Trivy image gate (CRITICAL, fixable only).
+# Each entry expires: after expired_at Trivy stops honoring it and CI fails
+# again, forcing a re-review instead of letting an exception rot.
+#
+# Scope: all four are in the upstream `pgvector/pgvector:pg16` image (Debian 12
+# perl packages and the bundled gosu binary), NOT in code this repo ships. The
+# fix exists upstream (Debian 5.36.0-7+deb12u4; Go stdlib 1.24.13+) but the
+# image has not been rebuilt yet. Mitigations: the container is loopback-bound
+# only (gateway/docker-compose.yml), Postgres does not invoke perl on any
+# request path, and gosu only runs once at container start.
+# Re-verified 2026-10-05 (Trivy 0.75.0, remote scan): the NEWER digest 7b822b0a...
+# carries the identical set, so bumping gains nothing until upstream rebuilds.
+# Action when it expires: re-pull the image; if a rebuilt tag is out, delete the
+# entries; if not, re-assess and extend with a new written justification.
+vulnerabilities:
+  - id: CVE-2026-13221
+    statement: "Debian perl packages in upstream pgvector image; fixed in deb12u4, image not yet rebuilt. Loopback-only, perl not on request path."
+    expired_at: 2026-11-04
+  - id: CVE-2026-42496
+    statement: "perl-archive-tar in upstream pgvector image; fixed in deb12u4, image not yet rebuilt. Not reachable from a loopback-only Postgres."
+    expired_at: 2026-11-04
+  - id: CVE-2026-8376
+    statement: "perl heap overflow in upstream pgvector image; fixed in deb12u4, image not yet rebuilt. Perl is not invoked at runtime."
+    expired_at: 2026-11-04
+  - id: CVE-2025-68121
+    statement: "Go stdlib crypto/tls in the bundled gosu binary; gosu makes no TLS connections (privilege-drop at start only). Fixed upstream in Go 1.24.13, image not yet rebuilt."
+    expired_at: 2026-11-04
+

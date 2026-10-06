@@ -1,0 +1,28 @@
+title: LiteLLM Gateway Chat Completion Request
+name: litellm_completion_request
+id: d11988a8-5081-45c5-9e89-79aa9f424486
+status: experimental
+description: >
+  Base selection of chat-completion calls through the gateway, keyed by
+  virtual-key alias. Includes calls the gateway itself rejected (401
+  unauthorized, 429 rate-limited) as well as ones it served -- a flood of
+  rejected calls is exactly the kind of volume a key-abuse detection should
+  still count, not filter out. Not an alert on its own -- feeds the
+  gateway_high_volume_completions correlation rule.
+x-fixtures:
+  - ../samples/gateway_spend_logs.jsonl
+author: Phrozyn
+date: '2026-10-01'
+logsource:
+  product: litellm
+  service: spend-logs
+detection:
+  selection:
+    call_type: acompletion
+  condition: selection
+fields:
+  - user_api_key_alias
+  - requester_ip_address
+  - model_group
+  - total_tokens
+level: informational

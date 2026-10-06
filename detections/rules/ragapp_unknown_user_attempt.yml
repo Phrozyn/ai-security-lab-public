@@ -1,0 +1,28 @@
+title: RAG App Query Attempted With Unrecognized Username
+id: 94012a8d-773f-484d-a34f-44da7462aeb4
+status: experimental
+description: >
+  Detects a query attempted against a username not present in the app's
+  user/ACL map. On an internal tool with a small, known caller set, this is
+  more likely probing or a misconfigured integration than a typo -- several
+  distinct unrecognized usernames in a short window would be a stronger
+  enumeration signal, but even one is cheap to review given how rarely this
+  should happen in normal use.
+x-fixtures:
+  - ../samples/ragapp_audit.jsonl
+author: Phrozyn
+date: '2026-10-01'
+logsource:
+  product: ragapp
+  service: query-audit
+detection:
+  selection:
+    event: unknown_user
+  condition: selection
+fields:
+  - username
+level: low
+falsepositives:
+  - A real username added to a caller's config before users.yaml was updated to match
+tags:
+  - attack.discovery

@@ -1,0 +1,9 @@
+# Simulated users for the ACL-enforcement test. Not real accounts — this maps
+# a caller identity to which acl tags their retrieval queries are allowed to match.
+users:
+  guest:
+    allowed_acl: [public]
+  alice_engineering:
+    allowed_acl: [public, internal]
+  bob_exec:
+    allowed_acl: [public, internal, restricted]

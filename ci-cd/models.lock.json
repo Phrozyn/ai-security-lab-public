@@ -1,0 +1,40 @@
+{
+  "schema": 1,
+  "source": "registry.ollama.ai",
+  "digest_kind": "sha256 of the registry manifest bytes (the value Ollama reports as `digest` in /api/tags)",
+  "generated": "2026-10-05",
+  "models": [
+    {
+      "name": "gemma4:e2b",
+      "manifest_sha256": "7fbdbf8f5e45a75bb122155ed546e765b4d9c53a1285f62fd9f506baa1c5a47e",
+      "used_by": [
+        "gateway route local-gemma",
+        "rag-app generation"
+      ],
+      "note": "Locked to the version deployed on LLM_HOST (pulled 2026-09-29). The upstream tag has since moved; registry served b37049369adfe3d2b653af0ab301a062ca5cbe96ace6aa0d3f2559ee9b563fc2 on 2026-10-05."
+    },
+    {
+      "name": "qwen3.8:latest",
+      "manifest_sha256": "22130167c4c20e20c7b71454612966ca8e8171e9b3cc8ab6ce8aa6cbfec79643",
+      "used_by": [
+        "gateway route local-qwen"
+      ],
+      "note": "Locked to the version deployed on LLM_HOST (pulled 2026-09-29). The upstream tag has since moved; registry served aaee06c39dcf2437cde036998d960e1fc1494b8191be7cc9657d01e509097813 on 2026-10-05."
+    },
+    {
+      "name": "llama-guard3:latest",
+      "manifest_sha256": "46f211c3d8662823ea4956d1a9e92b2924f84cbd0a0f88b64eaadb59fe58b99d",
+      "used_by": [
+        "rag-app input/output guardrail"
+      ]
+    },
+    {
+      "name": "nomic-embed-text:latest",
+      "manifest_sha256": "0a109f422b47e3a30ba2b10eca18548e944e8a23073ee3f3e947efcf3c45e59f",
+      "used_by": [
+        "rag-app embeddings"
+      ]
+    }
+  ],
+  "verified_against_live": "2026-10-05 via ci-cd/scripts/verify-models.ts (4/4 locked models match; deepseek-v3 is served but intentionally unlocked/unrouted)"
+}

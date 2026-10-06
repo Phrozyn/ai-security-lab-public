@@ -1,0 +1,29 @@
+title: LiteLLM Gateway Key-Management Endpoint Failure
+id: 05419d26-11b7-4635-90fa-cb89f3593bae
+status: experimental
+description: >
+  Detects a failed call to the gateway's admin key-management endpoints
+  (/key/generate, /key/update, /key/delete). These endpoints are gated on
+  the master key and should be called rarely, by known tooling; a failure
+  here means either a misbehaving script (alias collision, bad payload) or
+  someone probing admin functionality who doesn't know the real key schema.
+x-fixtures:
+  - ../samples/gateway_key_generate_failure.jsonl
+author: Phrozyn
+date: '2026-10-01'
+logsource:
+  product: litellm
+  service: docker-json
+detection:
+  selection:
+    component: 'LiteLLM Proxy'
+    logger|startswith: 'key_management_endpoints'
+    level: ERROR
+  condition: selection
+fields:
+  - message
+level: medium
+falsepositives:
+  - A deploy script re-running key creation and hitting the existing-alias guard
+tags:
+  - attack.privilege-escalation

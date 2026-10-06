@@ -1,0 +1,33 @@
+title: LiteLLM Gateway Authentication Failure
+name: litellm_auth_failure
+id: a50cc7e7-ec76-4b4d-94b8-bc0d8254dae2
+status: experimental
+description: >
+  Detects the gateway rejecting a request because the bearer token presented
+  isn't a known virtual key. One hit is often just an expired/typo'd key --
+  on its own this is a low-severity signal. Feeds the
+  gateway_repeated_auth_failures correlation rule for the pattern that
+  actually matters (several in a short window from one source).
+x-fixtures:
+  - ../samples/gateway_auth_failure.jsonl
+author: Phrozyn
+date: '2026-10-01'
+logsource:
+  product: litellm
+  service: docker-json
+detection:
+  selection:
+    component: 'LiteLLM Proxy'
+    logger|startswith: 'auth_exception_handler'
+    level: ERROR
+    message|contains: 'Authentication Error'
+  condition: selection
+fields:
+  - requester_ip
+  - message
+level: low
+falsepositives:
+  - A legitimate caller using a stale or revoked key by mistake
+  - A client that hasn't picked up a just-rotated key yet
+tags:
+  - attack.credential-access

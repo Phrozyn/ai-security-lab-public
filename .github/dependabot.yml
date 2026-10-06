@@ -1,0 +1,13 @@
+version: 2
+updates:
+  # Compose image digests: a bump arrives as a PR and runs the full gate set
+  # (Trivy/Grype/harness) before it can merge.
+  - package-ecosystem: docker-compose
+    directory: /gateway
+    schedule:
+      interval: weekly
+  # SHA-pinned actions: Dependabot rewrites the SHA and the version comment.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

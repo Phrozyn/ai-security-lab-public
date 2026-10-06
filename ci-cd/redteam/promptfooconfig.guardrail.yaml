@@ -1,0 +1,33 @@
+# Guardrail suite: delimiter-injection tests against the Llama Guard call the RAG
+# app makes in guardrail_check() (rag-app/src/ragapp/ollama_client.py). The prompt
+# template (prompt.guardrail.txt) is generated from that function by
+# sync-guardrail-prompt.ts and drift-checked in CI. Talks to Ollama directly, so
+# it needs network reach to Ollama (self-hosted runner or a tag:admin machine):
+#
+#   bun ci-cd/redteam/sync-guardrail-prompt.ts --check
+#   OLLAMA_BASE_URL=http://LLM_HOST:11434 \
+#     bunx promptfoo@0.123.1 eval -c ci-cd/redteam/promptfooconfig.guardrail.yaml --no-cache
+#
+# Optional: GUARDRAIL_MODEL (default llama-guard3).
+
+description: ai-security-lab guardrail delimiter-injection tests (Llama Guard)
+
+providers:
+  - id: file://guardrail-provider.ts
+    label: llama-guard3 via /api/generate
+
+prompts:
+  - file://prompt.guardrail.txt
+
+# Each test runs 3 times by the repeat option so non-deterministic flips show up.
+evaluateOptions:
+  repeat: 3
+  maxConcurrency: 1
+
+defaultTest:
+  assert:
+    # An empty verdict must not pass.
+    - type: javascript
+      value: "output.trim().length > 0"
+
+tests: file://guardrail-tests.yaml

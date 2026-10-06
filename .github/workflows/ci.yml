@@ -221,6 +221,8 @@ jobs:
           python -m pip install --quiet --no-deps -e rag-app
       - name: Live red-team prompt has not drifted from the RAG system prompt
         run: bun ci-cd/redteam/sync-prompt.ts --check
+      - name: Guardrail test prompt has not drifted from guardrail_check()
+        run: bun ci-cd/redteam/sync-guardrail-prompt.ts --check
       - name: ACL / injection / guardrail / audit red-team harness
         run: bun ci-cd/acl-redteam/harness.ts
       - name: System-prompt leak guard (deterministic output backstop)

@@ -40,7 +40,7 @@ const PG_CONTAINER = process.env.RAGAPP_PG_CONTAINER;
 const PSQL = process.env.PSQL ?? "psql";
 const GATEWAY_KEY = "sk-ci-test-key";
 const EMBED_DIM = 768;
-const EXPECTED_CHECKS = 45;
+const EXPECTED_CHECKS = 46;
 const UNSAFE_TRIGGER = "UNSAFE-TRIGGER";
 const DB_TIMEOUT_MS = 15_000;
 const PSQL_TIMEOUT_MS = 60_000;
@@ -82,12 +82,21 @@ function embedText(text: string): number[] {
 type GatewayCall = { system: string; user: string; auth: string | null };
 const gatewayCalls: GatewayCall[] = [];
 
+// Failure injection for the ingest atomicity check: when armed, the Nth
+// embedding request from now returns HTTP 500.
+let embeddingCalls = 0;
+let failEmbeddingAt: number | null = null;
+
 const fakeOllama = Bun.serve({
   port: 0,
   async fetch(req) {
     const url = new URL(req.url);
     const body = (await req.json()) as Record<string, unknown>;
     if (url.pathname === "/api/embeddings") {
+      embeddingCalls++;
+      if (failEmbeddingAt !== null && embeddingCalls === failEmbeddingAt) {
+        return new Response("injected embedding failure", { status: 500 });
+      }
       return Response.json({ embedding: embedText(body.prompt as string) });
     }
     // Llama Guard via guardrail_check(): the verdict is on the last message.
@@ -496,6 +505,21 @@ try {
     }
   }
   check("re-ingest: keeps RLS, policies, grants and memberships unchanged (restricted scope reads 4, no role switch reads 0)", reingest.code === 0 && /Ingested 4 documents/.test(reingest.out) && afterReingest.chunks_rls === "t|f" && JSON.stringify(beforeReingest) === JSON.stringify(afterReingest) && reingestCounts === "4/0", `code=${reingest.code} counts=${reingestCounts} before=${JSON.stringify(beforeReingest)} after=${JSON.stringify(afterReingest)} err=${reingest.err.slice(-300)}`);
+
+  // Ingestion embeds every document before it touches the database and then
+  // runs TRUNCATE and the inserts in one transaction. A failure on document 2
+  // must leave the stored corpus, RLS and policies exactly as they were.
+  const docIds = async () => (await bounded(ownerSql`SELECT doc_id FROM chunks ORDER BY doc_id`, "doc ids")).map((r: { doc_id: string }) => r.doc_id).join(",");
+  const beforeFailedIngest = { priv: JSON.stringify(await privilegeSnapshot(ownerSql)), ids: await docIds() };
+  failEmbeddingAt = embeddingCalls + 2;
+  const failedIngest = await runCli(["ingest"], "owner");
+  failEmbeddingAt = null;
+  const afterFailedIngest = { priv: JSON.stringify(await privilegeSnapshot(ownerSql)), ids: await docIds() };
+  check(
+    "ingest: an embedding failure on document 2 exits non-zero and leaves the 4 stored documents, RLS and policies unchanged",
+    failedIngest.code !== 0 && beforeFailedIngest.ids.split(",").length === 4 && beforeFailedIngest.ids === afterFailedIngest.ids && beforeFailedIngest.priv === afterFailedIngest.priv,
+    `code=${failedIngest.code} before=${beforeFailedIngest.ids} after=${afterFailedIngest.ids} err=${failedIngest.err.slice(-200)}`,
+  );
 
   const [remaining] = await bounded(ownerSql`SELECT count(*)::int AS n FROM chunks`, "chunk count");
   check("chunks unchanged after the negative checks (4 rows)", remaining.n === 4, `rows=${remaining.n}`);

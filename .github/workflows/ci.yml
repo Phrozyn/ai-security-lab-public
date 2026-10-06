@@ -90,6 +90,10 @@ jobs:
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
       - id: list
         run: bun ci-cd/scripts/list-compose-images.ts
+      - name: Image policy check tests
+        run: bun test ci-cd/scripts/list-compose-images.test.ts
+      - name: Key-creation script tests (stub gateway)
+        run: bun test gateway/scripts/create-key.test.ts
 
   supply-chain:
     needs: images
@@ -190,7 +194,9 @@ jobs:
     timeout-minutes: 25
     services:
       postgres:
-        image: pgvector/pgvector:pg16
+        # Same digest as gateway/docker-compose.yml; ci-cd/scripts/list-compose-images.ts
+        # fails the images job when the two differ.
+        image: pgvector/pgvector:pg16@sha256:ccc6e83d6e35e931dc7c5def2022729d5a6c370318d099181995567ff1fb4d6b
         env:
           POSTGRES_USER: ragapp
           POSTGRES_PASSWORD: ci-only-throwaway

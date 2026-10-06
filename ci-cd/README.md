@@ -9,16 +9,16 @@ GitHub Actions pipeline (`.github/workflows/ci.yml`) that gates every push to `m
 | `detections` | The 8 Sigma rules fire on captured fixtures **and** are valid Sigma | `detections/validate.ts`, pySigma (`sigma check`) |
 | `secrets` | No credential anywhere in full git history | gitleaks |
 | `model-supply-chain` | No serialized model artifact is committed; `models.lock.json` is well-formed and matches the models the deployed config references; ModelScan flags a malicious pickle and passes a benign one *before* it is relied on | `ci-cd/scripts/*.ts`, ModelScan |
-| `images` + `supply-chain` (per image) | Every compose image is pinned by `@sha256` digest (job fails otherwise) and the scan matrix is derived from the compose file; no fixable CRITICAL CVE in those exact images; no HIGH/CRITICAL compose misconfiguration; SBOM per image | Trivy, Syft |
+| `images` + `supply-chain` (per image) | Every compose image and every workflow image is pinned by `@sha256` digest, and a workflow digest must equal the compose digest (job fails otherwise; update both when Dependabot bumps the compose pin) and the scan matrix is derived from the compose file; no fixable CRITICAL CVE in those exact images; no HIGH/CRITICAL compose misconfiguration; SBOM per image | Trivy, Syft |
 | `python-deps` | No fixable HIGH+ CVE in the RAG app's dependency lock; the SBOM is non-empty (an empty SBOM would pass everything) | Syft, Grype |
-| `acl-redteam` | The `ragapp` CLI against pgvector, 45 checks: retrieval-time ACL (with positive controls), indirect-injection containment, input-guardrail short-circuit, audit-log privacy, and least privilege of the read-only query role (INSERT, UPDATE, DELETE, TRUNCATE, CREATE TABLE and CREATE TEMP TABLE are denied), and row-level security on `chunks` (default deny, rows visible per scope role, no `SET ROLE` to the owner) | `ci-cd/acl-redteam/harness.ts` |
+| `acl-redteam` | The `ragapp` CLI against pgvector, 46 checks: retrieval-time ACL (with positive controls), indirect-injection containment, input-guardrail short-circuit, audit-log privacy, and least privilege of the read-only query role (INSERT, UPDATE, DELETE, TRUNCATE, CREATE TABLE and CREATE TEMP TABLE are denied), and row-level security on `chunks` (default deny, rows visible per scope role, no `SET ROLE` to the owner), and ingest atomicity (an embedding failure on document 2 leaves the stored corpus unchanged) | `ci-cd/acl-redteam/harness.ts` |
 | `redteam-live` | Live model behavior through the gateway using the RAG app's system prompt (`prompt.json`, generated from `query.py` and drift-checked in CI): canary leakage, indirect injection from the poisoned doc; locked model digests match what Ollama serves | promptfoo, `verify-models.ts` |
 | `sign` | cosign signs the model lock and SBOMs, then verifies its own signatures | cosign keyless |
 
 ## What is and isn't proven
 
 **Verified by running it:**
-- All hosted jobs pass on `main` (45/45 harness checks).
+- All hosted jobs pass on `main` (46/46 harness checks).
 - The gates fail when they should. A throwaway PR planted a removed ACL filter, a committed pickle, and a fake GitHub token: `acl-redteam` failed 4 checks, `model-supply-chain` rejected the pickle, `secrets` reported `RuleID: github-pat`. The PR was closed and the branch deleted.
 - The pipeline caught two findings in its own first runs: `cryptography` 48.x carrying two fixed High advisories (fixed by a `>=50` floor in `pyproject.toml`), and 12 fixable CRITICALs in the upstream `pgvector/pgvector:pg16` image (see exceptions below).
 - The negative test also caught a bug in the pipeline itself: the `secrets` job failed on PRs for the wrong reason (403 on the PR commits API) until it was granted `pull-requests: read`.

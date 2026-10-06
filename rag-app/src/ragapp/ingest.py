@@ -12,22 +12,44 @@ from ragapp import db
 from ragapp.ollama_client import embed
 
 
-def ingest_corpus(corpus_dir: Path) -> int:
-    conn = db.get_connection(readonly=False)
-    db.init_schema(conn)
-    db.clear_chunks(conn)
-
-    count = 0
+def _load_corpus(corpus_dir: Path) -> list[dict]:
+    """Parses every document before anything is embedded or stored."""
+    docs = []
     for path in sorted(corpus_dir.glob("*.md")):
         post = frontmatter.load(path)
-        doc_id = post.get("doc_id", path.stem)
-        acl = post["acl"]
-        owner = post["owner"]
-        content = post.content.strip()
+        for key in ("acl", "owner"):
+            if key not in post:
+                raise ValueError(f"{path.name}: front matter is missing '{key}'")
+        docs.append(
+            {
+                "doc_id": post.get("doc_id", path.stem),
+                "acl": post["acl"],
+                "owner": post["owner"],
+                "content": post.content.strip(),
+            }
+        )
+    if not docs:
+        raise ValueError(f"no .md documents in {corpus_dir}")
+    return docs
 
-        vector = embed(content)
-        db.insert_chunk(conn, doc_id, acl, owner, content, vector)
-        count += 1
-        print(f"ingested {doc_id} (acl={acl}, owner={owner}, {len(content)} chars)")
 
-    return count
+def ingest_corpus(corpus_dir: Path) -> int:
+    docs = _load_corpus(corpus_dir)
+    # Every embedding is computed before the database is touched, so an Ollama
+    # failure or a malformed document leaves the stored corpus as it was.
+    vectors = [embed(doc["content"]) for doc in docs]
+
+    conn = db.get_connection(readonly=False)
+    try:
+        db.init_schema(conn)
+        # TRUNCATE and the inserts commit together or not at all.
+        with conn.transaction():
+            db.clear_chunks(conn)
+            for doc, vector in zip(docs, vectors):
+                db.insert_chunk(conn, doc["doc_id"], doc["acl"], doc["owner"], doc["content"], vector)
+    finally:
+        conn.close()
+
+    for doc in docs:
+        print(f"ingested {doc['doc_id']} (acl={doc['acl']}, owner={doc['owner']}, {len(doc['content'])} chars)")
+    return len(docs)

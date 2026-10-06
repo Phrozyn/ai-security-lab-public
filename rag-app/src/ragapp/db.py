@@ -17,8 +17,6 @@ import psycopg
 from pgvector.psycopg import register_vector
 from psycopg import sql
 
-DEFAULT_DATABASE_URL = "postgresql://ragapp:ragapp@127.0.0.1:5432/ragapp"
-
 EMBED_DIM = 768  # nomic-embed-text's output dimension
 
 # allowed_acl set -> the scope role whose RLS policy admits exactly that set
@@ -53,7 +51,9 @@ def get_connection(readonly: bool = False) -> psycopg.Connection:
         if not url:
             raise RuntimeError("RAGAPP_QUERY_DATABASE_URL is not set (query path)")
     else:
-        url = os.environ.get("RAGAPP_DATABASE_URL", DEFAULT_DATABASE_URL)
+        url = os.environ.get("RAGAPP_DATABASE_URL", "")
+        if not url:
+            raise RuntimeError("RAGAPP_DATABASE_URL is not set (ingest path)")
 
     conn = psycopg.connect(url, autocommit=True)
     try:

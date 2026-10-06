@@ -25,7 +25,6 @@ import ragapp  # noqa: E402
 
 OWNER_URL = "postgresql://owner:owner-pw@db.example:5432/ragapp"
 QUERY_URL = "postgresql://ragapp_query:query-pw@db.example:5432/ragapp"
-DEFAULT_OWNER_URL = "postgresql://ragapp:ragapp@127.0.0.1:5432/ragapp"
 READ_ONLY_SQL = "SET SESSION CHARACTERISTICS AS TRANSACTION READ ONLY"
 GUARD_SQL = "SELECT has_table_privilege('chunks', 'INSERT, UPDATE, DELETE, TRUNCATE')"
 FRESH = ("ragapp.db", "ragapp.query", "ragapp.ingest")
@@ -150,11 +149,14 @@ class OwnerConnection(unittest.TestCase):
             self.assertEqual(conn.executed, [])
             self.assertFalse(conn.closed)
 
-    def test_default_url_when_unset(self):
-        with fresh_import("ragapp.db") as (db, connect, _), _env():
-            connect.return_value = FakeConnection()
-            db.get_connection()
-            connect.assert_called_once_with(DEFAULT_OWNER_URL, autocommit=True)
+    def test_owner_url_is_required(self):
+        for value in (None, ""):
+            with fresh_import("ragapp.db") as (db, connect, _), _env(
+                **({} if value is None else {"RAGAPP_DATABASE_URL": value}), RAGAPP_QUERY_DATABASE_URL=QUERY_URL
+            ):
+                with self.assertRaisesRegex(RuntimeError, "RAGAPP_DATABASE_URL is not set"):
+                    db.get_connection(readonly=False)
+                connect.assert_not_called()
 
     def test_env_read_at_call_time(self):
         with fresh_import("ragapp.db") as (db, connect, _):
@@ -229,19 +231,6 @@ class ConnectionErrors(unittest.TestCase):
 
 
 class CallerRoles(unittest.TestCase):
-    def test_ingest_requests_owner_connection(self):
-        stubs = {
-            "frontmatter": _module("frontmatter", load=mock.MagicMock()),
-            "ragapp.ollama_client": _module("ragapp.ollama_client", embed=mock.MagicMock()),
-        }
-        with fresh_import("ragapp.ingest", stubs) as (ingest, _, _), tempfile.TemporaryDirectory() as d:
-            get_connection = mock.MagicMock(name="get_connection")
-            with mock.patch.object(ingest.db, "get_connection", get_connection), mock.patch.object(
-                ingest.db, "init_schema"
-            ), mock.patch.object(ingest.db, "clear_chunks"):
-                self.assertEqual(ingest.ingest_corpus(Path(d)), 0)
-            get_connection.assert_called_once_with(readonly=False)
-
     def test_query_requests_read_only_connection(self):
         ollama = _module(
             "ragapp.ollama_client",

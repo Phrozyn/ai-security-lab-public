@@ -45,7 +45,8 @@ Commands (run from the repository root):
 | ACL and privilege harness | `bun ci-cd/acl-redteam/harness.ts` (needs Postgres with pgvector, a superuser `RAGAPP_DATABASE_URL`, and `psql` 15+ or `RAGAPP_PG_CONTAINER`) |
 | Red-team prompt drift checks | `bun ci-cd/redteam/sync-prompt.ts --check` and `bun ci-cd/redteam/sync-guardrail-prompt.ts --check` |
 | Guardrail sync script tests | `bun test ci-cd/redteam/sync-guardrail-prompt.test.ts` |
-| Compose images pinned by digest | `bun ci-cd/scripts/list-compose-images.ts` |
+| Compose and workflow images pinned by digest | `bun ci-cd/scripts/list-compose-images.ts` and `bun test ci-cd/scripts/list-compose-images.test.ts` |
+| Key-creation script | `bun test gateway/scripts/create-key.test.ts` (needs bash, curl, jq) |
 | Model lock validation | `bun ci-cd/scripts/validate-models-lock.ts` |
 
 The live red-team suites need network access to `LLM_HOST`. The `redteam-live` CI job is skipped on repositories without a runner for it.
@@ -53,7 +54,7 @@ The live red-team suites need network access to `LLM_HOST`. The `redteam-live` C
 ## Code Style and Conventions
 
 - **Languages.** Tooling, harnesses and scripts are TypeScript run with Bun (`bun`, `bunx`). Python is limited to `rag-app/`. Shell is limited to `gateway/scripts/`. SQL lives in `sql/` directories.
-- **Dependencies.** Python dependencies are declared in `rag-app/pyproject.toml` and locked with hashes in `rag-app/requirements-lock.txt`. Install with `--require-hashes`. GitHub Actions are pinned by commit SHA. Container images are pinned by sha256 digest. `bunx` tools are pinned to an exact version.
+- **Dependencies.** Python dependencies are declared in `rag-app/pyproject.toml` and locked with hashes in `rag-app/requirements-lock.txt`. Install with `--require-hashes`. GitHub Actions are pinned by commit SHA. Container images (the compose file and workflow services) are pinned by sha256 digest, and `ci-cd/scripts/list-compose-images.ts` fails on an unpinned image or on a workflow digest that differs from the compose digest. `bunx` tools are pinned to an exact version.
 - **Fail loud.** Validators, harnesses and checks throw on any input they do not handle. A check names a positive control or an exact expectation, and the harness fails when fewer checks ran than expected (`EXPECTED_CHECKS` in `ci-cd/acl-redteam/harness.ts`). Do not add fallbacks that turn an unknown case into a pass.
 - **Tests.** Behavior changes come with a test in the same change. Do not weaken, skip or delete an assertion to make a test pass. Negative tests assert the exact error (for example, SQLSTATE `42501`).
 - **Generated files.** `ci-cd/redteam/prompt.json` and `prompt.guardrail.json` are generated from `rag-app/src/ragapp/query.py` and `ollama_client.py`. Edit the source, then run the matching `sync-*.ts` script. CI checks for drift.

@@ -11,14 +11,14 @@ GitHub Actions pipeline (`.github/workflows/ci.yml`) that gates every push to `m
 | `model-supply-chain` | No serialized model artifact is committed; `models.lock.json` is well-formed and matches the models the deployed config references; ModelScan flags a malicious pickle and passes a benign one *before* it is relied on | `ci-cd/scripts/*.ts`, ModelScan |
 | `images` + `supply-chain` (per image) | Every compose image is pinned by `@sha256` digest (job fails otherwise) and the scan matrix is derived from the compose file; no fixable CRITICAL CVE in those exact images; no HIGH/CRITICAL compose misconfiguration; SBOM per image | Trivy, Syft |
 | `python-deps` | No fixable HIGH+ CVE in the RAG app's dependency lock; the SBOM is non-empty (an empty SBOM would pass everything) | Syft, Grype |
-| `acl-redteam` | The `ragapp` CLI against pgvector, 14 checks: retrieval-time ACL (with positive controls), indirect-injection containment, input-guardrail short-circuit, audit-log privacy | `ci-cd/acl-redteam/harness.ts` |
+| `acl-redteam` | The `ragapp` CLI against pgvector, 32 checks: retrieval-time ACL (with positive controls), indirect-injection containment, input-guardrail short-circuit, audit-log privacy, and least privilege of the read-only query role (INSERT, UPDATE, DELETE, TRUNCATE, CREATE TABLE and CREATE TEMP TABLE are denied) | `ci-cd/acl-redteam/harness.ts` |
 | `redteam-live` | Live model behavior through the gateway using the RAG app's system prompt (`prompt.json`, generated from `query.py` and drift-checked in CI): canary leakage, indirect injection from the poisoned doc; locked model digests match what Ollama serves | promptfoo, `verify-models.ts` |
 | `sign` | cosign signs the model lock and SBOMs, then verifies its own signatures | cosign keyless |
 
 ## What is and isn't proven
 
 **Verified by running it:**
-- All hosted jobs pass on `main` (14/14 harness checks).
+- All hosted jobs pass on `main` (32/32 harness checks).
 - The gates fail when they should. A throwaway PR planted a removed ACL filter, a committed pickle, and a fake GitHub token: `acl-redteam` failed 4 checks, `model-supply-chain` rejected the pickle, `secrets` reported `RuleID: github-pat`. The PR was closed and the branch deleted.
 - The pipeline caught two findings in its own first runs: `cryptography` 48.x carrying two fixed High advisories (fixed by a `>=50` floor in `pyproject.toml`), and 12 fixable CRITICALs in the upstream `pgvector/pgvector:pg16` image (see exceptions below).
 - The negative test also caught a bug in the pipeline itself: the `secrets` job failed on PRs for the wrong reason (403 on the PR commits API) until it was granted `pull-requests: read`.
@@ -54,7 +54,7 @@ On WSL with mirrored networking, the Windows Tailscale client is the only one (n
 
 ## Known gaps
 
-- `promptfooconfig.guardrail.yaml` (25 tests against the Llama Guard call) is not part of CI. 5 of its tests fail by design while the delimiter injection in `docs/threat-model.md` finding 7 is unfixed. Its prompt template drift check, `sync-guardrail-prompt.ts --check`, does run in CI. Wire the suite in after the fix.
+- `promptfooconfig.guardrail.yaml` (38 tests against the Llama Guard call) is not part of CI. 3 of its tests fail in all 3 repeats while the open-ended fake-last-turn gap in `docs/threat-model.md` finding 7 is open. Its request drift check, `sync-guardrail-prompt.ts --check`, does run in CI. Wire the suite in after the gap is closed.
 - Compose images are pinned by digest and match what runs on LLM_HOST. litellm was upgraded 2026-10-05 (1.103.0 -> 1.104.0, PyJWT 2.13.0 -> 2.15.0) after a verified database backup and a CI scan of the new digest; pgvector is still the older pinned digest (its exceptions below). Dependabot (`.github/dependabot.yml`) opens bump PRs that run the full gate set.
 - `.trivyignore.yaml` holds four time-boxed exceptions, all for the pinned upstream pgvector image (Debian perl, gosu), expiring **2026-11-04**; after that the gate fails again and forces a re-review. On 2026-10-05 the newest upstream pgvector digest was scanned with the exceptions removed and carries the identical findings, so Dependabot's bump was closed rather than merged: it would have restarted Postgres to remove nothing. The only ways to clear them are an upstream rebuild or a derived image with Debian's patched perl and a rebuilt gosu. (A fifth, for PyJWT in the old litellm image, was removed when litellm was upgraded.)
 - The harness fakes Ollama and the gateway, so it proves the deterministic controls (ACL, fencing, guardrail short-circuit, logging) but not model behavior, and it does not exercise Presidio redaction (the corpus contains no PII to redact). Redaction is covered only by the live tests in `rag-app/README.md`.
@@ -68,6 +68,7 @@ bun ci-cd/scripts/validate-models-lock.ts
 pip install modelscan==0.8.8 && bun ci-cd/scripts/modelscan-gate.ts
 # from a tag:admin machine (Ollama listens on LLM_HOST's tailnet address only):
 OLLAMA_URL=http://LLM_HOST:11434 bun ci-cd/scripts/verify-models.ts
-# harness: needs Postgres+pgvector, the locked Python env, and RAGAPP_DATABASE_URL
+# harness: needs Postgres+pgvector, the locked Python env, RAGAPP_DATABASE_URL (a superuser, because the
+# harness runs rag-app/sql/roles.sql) and either psql 15+ on PATH or RAGAPP_PG_CONTAINER naming the Postgres container
 bun ci-cd/acl-redteam/harness.ts
 ```

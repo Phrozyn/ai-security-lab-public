@@ -1,5 +1,9 @@
 """pgvector-backed storage, in a dedicated `ragapp` database on the same
 Postgres instance the gateway deployed, not a separate DB server.
+
+Two roles: ingestion connects as the owner (RAGAPP_DATABASE_URL), the query
+path as the read-only `ragapp_query` role (RAGAPP_QUERY_DATABASE_URL). A
+superuser creates the vector extension and that role with rag-app/sql/roles.sql.
 """
 
 import os
@@ -7,17 +11,36 @@ import os
 import psycopg
 from pgvector.psycopg import register_vector
 
-DATABASE_URL = os.environ.get(
-    "RAGAPP_DATABASE_URL", "postgresql://ragapp:ragapp@127.0.0.1:5432/ragapp"
-)
+DEFAULT_DATABASE_URL = "postgresql://ragapp:ragapp@127.0.0.1:5432/ragapp"
 
 EMBED_DIM = 768  # nomic-embed-text's output dimension
 
 
-def get_connection() -> psycopg.Connection:
-    conn = psycopg.connect(DATABASE_URL, autocommit=True)
-    conn.execute("CREATE EXTENSION IF NOT EXISTS vector")
-    register_vector(conn)
+def get_connection(readonly: bool = False) -> psycopg.Connection:
+    if readonly:
+        url = os.environ.get("RAGAPP_QUERY_DATABASE_URL", "")
+        if not url:
+            raise RuntimeError("RAGAPP_QUERY_DATABASE_URL is not set (query path)")
+    else:
+        url = os.environ.get("RAGAPP_DATABASE_URL", DEFAULT_DATABASE_URL)
+
+    conn = psycopg.connect(url, autocommit=True)
+    try:
+        if readonly:
+            conn.execute("SET SESSION CHARACTERISTICS AS TRANSACTION READ ONLY")
+            # Refuses a query URL that points at the owner or a superuser.
+            can_write = conn.execute(
+                "SELECT has_table_privilege('chunks', 'INSERT, UPDATE, DELETE, TRUNCATE')"
+            ).fetchone()[0]
+            if can_write:
+                raise RuntimeError(
+                    "the query role can write to chunks; RAGAPP_QUERY_DATABASE_URL "
+                    "must connect as ragapp_query"
+                )
+        register_vector(conn)
+    except BaseException:
+        conn.close()
+        raise
     return conn
 
 

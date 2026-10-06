@@ -18,7 +18,10 @@ providers:
       temperature: 0
       # gemma4:e2b is a thinking model: a small budget is spent entirely on
       # reasoning and returns empty content (which would pass every not-icontains).
-      max_tokens: 800
+      # Completion tokens for this suite peaked at 644 of 800 until 2026-10-06, then
+      # two runs reached 800 and the fence-breakout test with a re-opened fake
+      # retrieved_context failed the non-empty check. 1600 leaves headroom.
+      max_tokens: 1600
 
 prompts:
   - file://prompt.json

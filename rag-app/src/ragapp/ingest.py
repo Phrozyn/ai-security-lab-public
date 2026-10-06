@@ -13,7 +13,7 @@ from ragapp.ollama_client import embed
 
 
 def ingest_corpus(corpus_dir: Path) -> int:
-    conn = db.get_connection()
+    conn = db.get_connection(readonly=False)
     db.init_schema(conn)
     db.clear_chunks(conn)
 

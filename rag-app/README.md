@@ -21,7 +21,7 @@ question --[guardrail: input]--> embed --> pgvector search
                                       guardrail: output
 ```
 
-Uses the same Postgres instance the gateway deployed (`pgvector/pgvector:pg16`, dedicated `ragapp` database, not a schema inside `litellm`'s own DB, separate credentials, separate blast radius). Generation calls route through the existing gateway with a dedicated virtual key, so they're authenticated, rate-limited, budgeted, and audit-logged like any other caller, embeddings and guardrail classification call Ollama directly, since neither is an end-user generation.
+Uses the same Postgres instance the gateway deployed (`pgvector/pgvector:pg16`, dedicated `ragapp` database, not a schema inside `litellm`'s own DB, separate credentials; the gateway connects as a superuser role, so the separation holds in one direction only). The query path connects as the read-only `ragapp_query` role (`RAGAPP_QUERY_DATABASE_URL`, created by `sql/roles.sql`); ingestion connects as the owner role (`RAGAPP_DATABASE_URL`). Generation calls route through the existing gateway with a dedicated virtual key, so they're authenticated, rate-limited, budgeted, and audit-logged like any other caller, embeddings and guardrail classification call Ollama directly, since neither is an end-user generation.
 
 ## Corpus and simulated users
 

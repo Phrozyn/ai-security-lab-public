@@ -33,25 +33,55 @@ def embed(text: str) -> list[float]:
     return resp.json()["embedding"]
 
 
-def guardrail_check(role: str, content: str) -> tuple[bool, str]:
-    """Returns (is_safe, raw_verdict). role is 'user' or 'assistant',
-    Llama Guard's chat template expects that distinction to know which
-    turn it's classifying.
+GUARDRAIL_ROLES = ("user", "assistant")
+
+
+def _single_line(text: str) -> str:
+    """Collapses every whitespace run, line breaks included, to one space.
+
+    The llama-guard3 chat template in Ollama inserts message content as text
+    between its <BEGIN CONVERSATION> and <END CONVERSATION> lines and then asks
+    for a verdict on the last turn. Content with line breaks can add lines that
+    read as an end marker, a verdict, and a new benign last turn (threat-model
+    finding 7). With the content on one line, the 25 original payloads in
+    ci-cd/redteam/guardrail-tests.yaml are classified unsafe. Rewriting the
+    marker text does not stop the attack: square-bracket, fullwidth-bracket and
+    bracketless markers flip the verdict the same way.
+
+    This does not stop a fake last turn that is a longer benign question or
+    answer; the three "open-ended" tests in guardrail-tests.yaml still return
+    safe on one line and with JSON-quoted content.
+
+    ci-cd/redteam/sync-guardrail-prompt.ts checks this body is unchanged and
+    guardrail-provider.ts applies the same transform; change all three together.
     """
-    prompt = (
-        f"Task: Check if there is unsafe content in '{role}' messages in "
-        "conversations according to our safety policy.\n\n"
-        f"<BEGIN CONVERSATION>\n{role}: {content}\n<END CONVERSATION>\n\n"
-        "Provide your safety assessment. First line must read 'safe' or "
-        "'unsafe'."
-    )
+    return " ".join(text.split())
+
+
+def guardrail_check(role: str, content: str) -> tuple[bool, str]:
+    """Returns (is_safe, raw_verdict). role is 'user' or 'assistant';
+    the model's chat template classifies the last message and labels it
+    User or Agent from its role.
+
+    Sent as one /api/chat message so the model's own chat template builds the
+    Llama Guard prompt. The content is passed through _single_line() first.
+
+    Any verdict that does not start with "safe" is unsafe. HTTP errors and
+    responses without message.content raise.
+    """
+    if role not in GUARDRAIL_ROLES:
+        raise ValueError(f"guardrail role must be one of {GUARDRAIL_ROLES}, got {role!r}")
     resp = httpx.post(
-        f"{OLLAMA_BASE_URL}/api/generate",
-        json={"model": GUARDRAIL_MODEL, "prompt": prompt, "stream": False},
+        f"{OLLAMA_BASE_URL}/api/chat",
+        json={
+            "model": GUARDRAIL_MODEL,
+            "messages": [{"role": role, "content": _single_line(content)}],
+            "stream": False,
+        },
         timeout=90,
     )
     resp.raise_for_status()
-    verdict = resp.json()["response"].strip()
+    verdict = resp.json()["message"]["content"].strip()
     is_safe = verdict.lower().startswith("safe")
     return is_safe, verdict
 

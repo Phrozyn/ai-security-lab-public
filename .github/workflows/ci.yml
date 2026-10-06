@@ -224,6 +224,9 @@ jobs:
       - name: Guardrail test prompt has not drifted from guardrail_check()
         run: bun ci-cd/redteam/sync-guardrail-prompt.ts --check
       - name: ACL / injection / guardrail / audit red-team harness
+        env:
+          # psql 16 from the service image runs rag-app/sql/roles.sql; the runner has no psql.
+          RAGAPP_PG_CONTAINER: ${{ job.services.postgres.id }}
         run: bun ci-cd/acl-redteam/harness.ts
       - name: System-prompt leak guard (deterministic output backstop)
         run: python -m unittest discover -s rag-app/tests -v

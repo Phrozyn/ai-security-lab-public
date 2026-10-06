@@ -83,9 +83,9 @@ def query(corpus_dir: Path, username: str, question: str) -> QueryResult:
             input_verdict=input_verdict,
         )
 
-    conn = db.get_connection()
-    query_vector = embed(question)
-    hits = db.search(conn, query_vector, allowed_acl, top_k=3)
+    with db.get_connection(readonly=True) as conn:
+        query_vector = embed(question)
+        hits = db.search(conn, query_vector, allowed_acl, top_k=3)
 
     redacted_chunks = []
     all_found_entities: set[str] = set()

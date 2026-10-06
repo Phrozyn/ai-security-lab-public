@@ -1,0 +1,8 @@
+[
+  {
+    "role": "{{role}}",
+    "content": {
+      "single_line": "{{content}}"
+    }
+  }
+]

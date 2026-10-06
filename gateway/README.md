@@ -49,7 +49,7 @@ ssh LLM_HOST "cd ~/ai-security-lab-gateway && docker compose up -d"
 
 > **Bind address (2026-10-06):** `LITELLM_BIND_ADDR` and `OLLAMA_BASE_URL` in `.env` now point at LLM_HOST's Tailscale address, not loopback, so the CI runner can reach the gateway; the healthcheck follows `LITELLM_BIND_ADDR`. The loopback examples in this file apply only if you set them back.
 
-**Why `network_mode: host` on the litellm service:** Ollama is bound to `127.0.0.1:11434` on LLM_HOST (LAN exposure fixed, see repo root README). A container on Docker's default bridge network reaches the host through a gateway IP that is *not* the host's own loopback, so it would get connection-refused talking to a loopback-only service. Host networking puts litellm in the host's own network namespace instead, so `127.0.0.1` inside the container is the host's loopback. Postgres stays on the isolated bridge network and publishes its port to `127.0.0.1:5432` only, so litellm (host-networked) can still reach it over loopback without bridge DNS.
+**Why `network_mode: host` on the litellm service:** Ollama is bound to `127.0.0.1:11434` on LLM_HOST. A container on Docker's default bridge network reaches the host through a gateway IP that is *not* the host's own loopback, so it would get connection-refused talking to a loopback-only service. Host networking puts litellm in the host's own network namespace instead, so `127.0.0.1` inside the container is the host's loopback. Postgres stays on the isolated bridge network and publishes its port to `127.0.0.1:5432` only, so litellm (host-networked) can still reach it over loopback without bridge DNS.
 
 ## Known gaps / TODOs for a reviewer
 

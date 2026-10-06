@@ -16,7 +16,7 @@ Portfolio repo demonstrating AI/ML security engineering practices: LLM gateway h
 
 ## Deploy target: LLM_HOST
 
-LLM_HOST (`<gateway_ip>:<port>`, Nvidia GPU, Linux, Ollama) is the runtime host. The gateway is live on it: loopback-bound, virtual-key-authenticated, audit-logged. Ollama itself was found LAN-exposed during this build (a leftover from earlier model-storage migration work) and has since been rebound to loopback, see `docs/threat-model.md` for the full finding.
+LLM_HOST (`<gateway_ip>:<port>`, Nvidia GPU, Linux, Ollama) is the runtime host. The gateway is live on it: loopback-bound, virtual-key-authenticated, audit-logged.
 
 ## Build order
 

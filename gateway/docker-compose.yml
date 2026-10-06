@@ -38,7 +38,7 @@ services:
     env_file:
       - .env
     # Host networking, not the default bridge: Ollama is bound to the HOST's
-    # 127.0.0.1:11434 only (by design, see repo root README, "Ollama exposure").
+    # 127.0.0.1:11434 only (by design).
     # A bridge-network container's gateway IP is not the same as the host's
     # loopback, so a normal container here would get connection-refused talking
     # to Ollama. Host networking puts litellm in the host's own network

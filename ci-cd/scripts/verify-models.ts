@@ -1,4 +1,4 @@
-// Deploy-time check: compare the models a live Ollama actually serves against
+// Deploy-time check: compare the models a live Ollama serves against
 // ci-cd/models.lock.json. Run it on the host (LLM_HOST) or through an ssh tunnel:
 //
 //   OLLAMA_URL=http://127.0.0.1:11434 bun ci-cd/scripts/verify-models.ts

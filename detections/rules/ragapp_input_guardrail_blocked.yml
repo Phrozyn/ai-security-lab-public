@@ -22,6 +22,6 @@ fields:
   - input_verdict
 level: medium
 falsepositives:
-  - Deliberate red-team/guardrail testing of the deployed safety model (as used to generate this rule's own fixture)
+  - Red-team/guardrail testing of the deployed safety model (as used to generate this rule's own fixture)
 tags:
   - attack.initial-access

@@ -1,11 +1,11 @@
 // Hosted-CI red-team gate for the RAG app's security properties.
 //
-// Runs the REAL `ragapp` CLI (ingest + query) against a real Postgres/pgvector
+// Runs the `ragapp` CLI (ingest + query) against a Postgres/pgvector
 // instance, with the two network dependencies replaced by deterministic fakes:
 //   - fake Ollama   (embeddings + Llama Guard verdicts)
 //   - fake gateway  (chat completions; echoes what the model WOULD have seen)
 // Because the fake gateway records every request body, the assertions are on
-// the data boundary itself: what actually crosses into the model's context.
+// the data boundary itself: what crosses into the model's context.
 //
 // This proves the deterministic controls (retrieval-time ACL, guardrail
 // short-circuit, audit-log privacy) on every push. It does NOT prove model
@@ -40,7 +40,7 @@ function embedText(text: string): number[] {
   if (v.every((x) => x === 0)) v[0] = 1;
   const norm = Math.sqrt(v.reduce((s, x) => s + x * x, 0));
   // JSON drops the ".0" on integer-valued floats (0.0 -> 0), and psycopg refuses
-  // a list that mixes int and float. Real Ollama emits all-nonzero floats, so
+  // a list that mixes int and float. Ollama emits all-nonzero floats, so
   // nudge any integer-valued entry to match that shape.
   return v.map((x) => {
     const f = x / norm;

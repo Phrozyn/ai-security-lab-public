@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 // Validates every Sigma rule in rules/: schema compliance, UUID uniqueness,
 // and -- the part a syntax check alone can't give you -- that each rule's
-// detection logic actually fires on a real captured log line (true positive)
+// detection logic fires on a captured log line (true positive)
 // and stays silent on an unrelated one (true negative). Fixtures live in
 // samples/, captured live from the deployed gateway and RAG app, not
 // hand-written to make the rule look good.
@@ -196,7 +196,7 @@ for (const { file, rule } of loaded) {
     const fullMax = Math.max(0, ...Object.values(fullWindow));
 
     // Negative proof 1: the same rule logic over only the pre-burst
-    // historical slice of the same real fixture (everything more than one
+    // historical slice of the same fixture (everything more than one
     // timespan before the final event) must NOT cross the threshold --
     // otherwise the rule would alert on ordinary usage.
     const timespanMs = timespanSec * 1000;
@@ -206,8 +206,8 @@ for (const { file, rule } of loaded) {
     const histWindow = maxWindowCount(historical, timespanSec);
     const histMax = Math.max(0, ...Object.values(histWindow));
 
-    // Negative proof 2: a boundary check -- take only the real events that
-    // actually fall inside the dense burst window (same group, within one
+    // Negative proof 2: a boundary check -- take only the events that
+    // fall inside the dense burst window (same group, within one
     // timespan of its last event), trim to one event short of the
     // threshold, and confirm the rule does NOT fire. Proves the threshold
     // comparison itself is exact, not just "big number beats small number".

@@ -3,7 +3,7 @@
 One line per query, written to RAGAPP_AUDIT_LOG_PATH (default: logs/audit.jsonl
 next to the corpus). Mirrors the gateway's json_logs pattern so both
 components feed the same class of log-based detection tooling. Question and
-answer text are deliberately never logged here -- only counts and verdicts --
+answer text are never logged here -- only counts and verdicts --
 matching the gateway's store_prompts_in_spend_logs: false stance.
 """
 

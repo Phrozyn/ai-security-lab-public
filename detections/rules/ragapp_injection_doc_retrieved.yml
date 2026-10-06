@@ -3,12 +3,12 @@ id: c23b8a13-a8d6-43ea-8200-9886140ed0c1
 status: experimental
 description: >
   Detects a completed query whose retrieved context included a document
-  already known to carry an embedded prompt-injection payload (doc-004 in
+  known to carry an embedded prompt-injection payload (doc-004 in
   this lab's test corpus). This fires regardless of whether the model
   complied -- the point is visibility into when untrusted/flagged content
   entered a model's context window, since containment at the system-prompt
   layer isn't guaranteed to hold on every model or every phrasing.
-  Limitation: the doc-id list here is a hardcoded stand-in for what a real
+  Limitation: the doc-id list here is a hardcoded stand-in for what a production
   deployment would get from a content-scanning/tagging pipeline run over the
   corpus at ingest time, not from manual enumeration.
 x-fixtures:

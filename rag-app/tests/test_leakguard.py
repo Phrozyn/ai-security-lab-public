@@ -10,7 +10,7 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from ragapp.leakguard import leaks, prompt_shingles  # noqa: E402
 
-# Read the real prompt from source rather than importing query.py (which needs
+# Read the prompt from source rather than importing query.py (which needs
 # psycopg/ollama); same extraction approach as ci-cd/redteam/sync-prompt.ts.
 _src = (ROOT / "src/ragapp/query.py").read_text()
 PROMPT = re.search(r'SYSTEM_PROMPT = """([\s\S]*?)"""', _src).group(1).replace("\\\n", "")

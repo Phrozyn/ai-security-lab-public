@@ -7,7 +7,7 @@ description: >
   scraping, a leaked key being hammered by a script, or bulk data
   exfiltration via many small queries rather than one large one. Threshold
   (30 in 5 minutes) is a starting point for this lab's low-traffic demo
-  corpus, not a production-tuned baseline -- a real deployment would derive
+  corpus, not a production-tuned baseline -- a production deployment would derive
   it from observed per-key traffic over a baseline period.
 x-fixtures:
   - ../samples/gateway_spend_logs.jsonl

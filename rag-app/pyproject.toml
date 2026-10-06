@@ -14,7 +14,7 @@ dependencies = [
     "click>=8.1",
     # Security floor (transitive via presidio-anonymizer): 48.x carries two fixed
     # High advisories (GHSA-g6cj-pr64-35w5, GHSA-jwv3-5hgf-82ww) caught by the CI
-    # Grype gate. Stated explicitly so a re-lock can never regress below it.
+    # Grype gate. Stated here so a re-lock can never regress below it.
     "cryptography>=50.0.0",
 ]
 

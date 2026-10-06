@@ -4,7 +4,7 @@
 // supply-chain path (OWASP LLM03, MITRE ATLAS AML.T0010) this gate closes.
 //
 // Fails loud: if git can't list files, or any tracked path has a banned
-// extension, exit 1. No allowlist by default -- add one deliberately, in-diff.
+// extension, exit 1. No allowlist by default -- add one in-diff.
 
 const BANNED = [
   ".pkl", ".pickle", ".joblib", ".pt", ".pth", ".ckpt", ".bin", ".h5", ".hdf5",

@@ -1,5 +1,5 @@
 // Validates ci-cd/models.lock.json and cross-checks it against the models the
-// deployed config actually references, so the lock can't silently drift from
+// deployed config references, so the lock can't silently drift from
 // reality in either direction. Throws on anything unexpected.
 
 import { readFileSync } from "node:fs";
@@ -23,7 +23,7 @@ for (const m of lock.models) {
   seen.add(key);
 }
 
-// Models the deployed system references, read from the real config files.
+// Models the deployed system references, read from the config files.
 const referenced = new Set<string>();
 const litellm = readFileSync(resolve(root, "gateway/litellm_config.yaml"), "utf8");
 for (const m of litellm.matchAll(/^\s*model:\s*ollama\/(\S+)\s*$/gm)) referenced.add(normalize(m[1]));

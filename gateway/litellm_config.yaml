@@ -1,9 +1,9 @@
 # LiteLLM proxy config. Full schema: https://docs.litellm.ai/docs/proxy/configs
 #
-# Routes match what's actually pulled on LLM_HOST (confirmed via `ssh LLM_HOST ollama list`).
-# deepseek-v3 (404GB) is intentionally excluded from routing; it doesn't fit the
+# Routes match what's pulled on LLM_HOST (confirmed via `ssh LLM_HOST ollama list`).
+# deepseek-v3 (404GB) is excluded from routing; it doesn't fit the
 # host GPU's VRAM and would run almost entirely off system RAM; add it back as a
-# route if you specifically want to serve it slowly.
+# route if you want to serve it slowly.
 
 model_list:
   - model_name: local-gemma
@@ -12,8 +12,8 @@ model_list:
       api_base: os.environ/OLLAMA_BASE_URL
       # Ollama models have no published token pricing, so LiteLLM's cost
       # tracking, and therefore per-key max_budget enforcement, is $0/token
-      # unless told otherwise. These are internal nominal costs purely so a
-      # budget has something to sum against, not real dollar costs.
+      # unless told otherwise. These are internal nominal costs so a
+      # budget has something to sum against, not dollar costs.
       input_cost_per_token: 0.0000005
       output_cost_per_token: 0.0000015
   - model_name: local-qwen
@@ -36,8 +36,8 @@ general_settings:
   # Audit logging: every request/response is written to the LiteLLM_SpendLogs
   # table in Postgres (queryable via /spend/logs), keyed by virtual key.
   # store_prompts_in_spend_logs also persists prompt/response TEXT, not just
-  # metadata; that's a real privacy/data-retention decision, not a free win.
-  # Leave it off until there's an explicit retention policy for it (ties to
+  # metadata; that's a privacy/data-retention decision.
+  # Leave it off until there's a retention policy for it (ties to
   # the data-retention requirement in the broader portfolio, see docs/).
   store_prompts_in_spend_logs: false
 

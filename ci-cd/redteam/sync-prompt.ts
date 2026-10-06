@@ -1,6 +1,6 @@
-// Builds prompt.json for the GATE suite from the RAG app's REAL system prompt
+// Builds prompt.json for the GATE suite from the RAG app's system prompt
 // (rag-app/src/ragapp/query.py), plus a planted canary line, so the live
-// red-team suite tests what the app actually sends -- not a paraphrase of it.
+// red-team suite tests what the app sends -- not a paraphrase of it.
 //
 //   bun ci-cd/redteam/sync-prompt.ts           # (re)generate prompt.json
 //   bun ci-cd/redteam/sync-prompt.ts --check   # CI: fail if prompt.json drifted
@@ -37,7 +37,7 @@ if (process.argv.includes("--check")) {
     console.error("ci-cd/redteam/prompt.json has drifted from rag-app's SYSTEM_PROMPT. Run: bun ci-cd/redteam/sync-prompt.ts");
     process.exit(1);
   }
-  console.log("OK: prompt.json matches the RAG app's real system prompt.");
+  console.log("OK: prompt.json matches the RAG app's system prompt.");
 } else {
   writeFileSync(target, out);
   console.log("wrote ci-cd/redteam/prompt.json");

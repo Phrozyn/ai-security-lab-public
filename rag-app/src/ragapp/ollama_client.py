@@ -1,10 +1,10 @@
 """Thin client for Ollama's own API: embeddings and the guardrail model.
 
-Deliberately talks to Ollama directly (127.0.0.1:11434, loopback-only) rather
+Talks to Ollama directly (127.0.0.1:11434, loopback-only) rather
 than through the LiteLLM gateway for these two calls: embeddings and safety
 classification aren't end-user chat completions, and keeping them off the
 gateway's virtual-key/budget accounting keeps that accounting meaningful for
-actual user-facing generations, which do go through the gateway (see
+user-facing generations, which do go through the gateway (see
 generate() below).
 """
 
@@ -22,8 +22,8 @@ GENERATION_MODEL = os.environ.get("GENERATION_MODEL", "local-gemma")
 
 def embed(text: str) -> list[float]:
     # 90s, not 30s: a model's first call after being idle pays Ollama's cold-load
-    # cost (loading the model into GPU/RAM) on top of actual inference time,
-    # hit a ReadTimeout at 30s on the very first embed call during real testing.
+    # cost (loading the model into GPU/RAM) on top of inference time,
+    # hit a ReadTimeout at 30s on the very first embed call during testing.
     resp = httpx.post(
         f"{OLLAMA_BASE_URL}/api/embeddings",
         json={"model": EMBED_MODEL, "prompt": text},
@@ -57,7 +57,7 @@ def guardrail_check(role: str, content: str) -> tuple[bool, str]:
 
 
 def generate(system_prompt: str, user_message: str) -> str:
-    """Real user-facing generation, routed through the gateway, not
+    """User-facing generation, routed through the gateway, not
     called against Ollama directly, so it's authenticated, rate-limited,
     budgeted, and audit-logged exactly like any other gateway caller.
     """

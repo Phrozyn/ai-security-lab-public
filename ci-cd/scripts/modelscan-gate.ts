@@ -2,7 +2,7 @@
 // is indistinguishable from a working one, so this proves the gate can fire:
 //   - negative control: a pickle whose REDUCE calls os.system MUST be flagged
 //   - positive control: a pickle holding just the integer 1 MUST pass
-// Only then does it scan any real paths passed on the command line.
+// Only then does it scan any paths passed on the command line.
 //
 //   bun ci-cd/scripts/modelscan-gate.ts [path ...]
 //

@@ -6,7 +6,7 @@ description: >
   (/key/generate, /key/update, /key/delete). These endpoints are gated on
   the master key and should be called rarely, by known tooling; a failure
   here means either a misbehaving script (alias collision, bad payload) or
-  someone probing admin functionality who doesn't know the real key schema.
+  someone probing admin functionality who doesn't know the key schema.
 x-fixtures:
   - ../samples/gateway_key_generate_failure.jsonl
 author: Alicia Smith (Phrozyn)

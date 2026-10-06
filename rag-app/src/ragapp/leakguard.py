@@ -10,7 +10,7 @@ without the DB/Ollama stack.
 import re
 
 # 12 words clears the legitimate "retrieved material contained a suspicious
-# embedded instruction" note (7 words) yet catches real dumps.
+# embedded instruction" note (7 words) yet catches full dumps.
 LEAK_WINDOW_WORDS = 12
 
 

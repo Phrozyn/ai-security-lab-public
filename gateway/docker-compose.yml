@@ -1,7 +1,7 @@
 services:
   postgres:
     # Images are pinned by digest (the tag is kept for readability only; Docker
-    # resolves the digest). Pins are the digests actually running on LLM_HOST as of
+    # resolves the digest). Pins are the digests running on LLM_HOST as of
     # 2026-10-05; CI fails if any image here lacks a digest. To update: bump the
     # digest in a PR and let the Trivy/Grype gates run on it.
     # pgvector/pgvector:pg16 is upstream Postgres 16 with the pgvector extension
@@ -14,7 +14,7 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-litellm}
       POSTGRES_USER: ${POSTGRES_USER:-litellm}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set a real password in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set a password in .env}
     volumes:
       - litellm-db:/var/lib/postgresql/data
     healthcheck:
@@ -25,7 +25,7 @@ services:
     ports:
       # Loopback-only. litellm reaches this over 127.0.0.1, not the bridge network's
       # service-name DNS, because litellm below runs in host network mode (see why
-      # in that service's comment), so this container needs an explicit loopback
+      # in that service's comment), so this container needs a loopback
       # path in instead of relying on being on the same compose network.
       - "127.0.0.1:5432:5432"
 
@@ -42,9 +42,9 @@ services:
     # A bridge-network container's gateway IP is not the same as the host's
     # loopback, so a normal container here would get connection-refused talking
     # to Ollama. Host networking puts litellm in the host's own network
-    # namespace, so 127.0.0.1 inside the container really is the host's loopback.
+    # namespace, so 127.0.0.1 inside the container is the host's loopback.
     # This also means litellm's own bind address is no longer enforced by Docker's
-    # port-publish mechanism, hence the explicit `--host 127.0.0.1` below, so the
+    # port-publish mechanism, hence the `--host 127.0.0.1` below, so the
     # gateway itself doesn't end up LAN-reachable as a side effect of this change.
     network_mode: host
     environment:

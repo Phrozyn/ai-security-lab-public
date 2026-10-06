@@ -31,7 +31,7 @@ jobs:
         with:
           python-version: "3.12"
       # Two independent checks: the fixture-replay harness proves the rules fire
-      # on real captured events; pySigma (the authoritative implementation of the
+      # on captured events; pySigma (the authoritative implementation of the
       # Sigma spec) proves the rules are valid Sigma.
       - run: bun detections/validate.ts
       - run: |
@@ -165,7 +165,7 @@ jobs:
           output-file: sbom-ragapp.cdx.json
           upload-artifact: false
       # A scanner fed an empty SBOM passes everything -- assert the lock was
-      # actually cataloged (presidio is a direct dependency; sanity floor 50).
+      # cataloged (presidio is a direct dependency; sanity floor 50).
       - name: SBOM is not empty
         run: |
           n=$(jq '.components | length' sbom-ragapp.cdx.json)
@@ -219,7 +219,7 @@ jobs:
           printf '%s\n' 'en_core_web_lg @ https://github.com/explosion/spacy-models/releases/download/en_core_web_lg-3.8.0/en_core_web_lg-3.8.0-py3-none-any.whl --hash=sha256:293e9547a655b25499198ab15a525b05b9407a75f10255e405e8c3854329ab63' > /tmp/spacy-model.txt
           python -m pip install --quiet --require-hashes --no-deps -r /tmp/spacy-model.txt
           python -m pip install --quiet --no-deps -e rag-app
-      - name: Live red-team prompt has not drifted from the real RAG system prompt
+      - name: Live red-team prompt has not drifted from the RAG system prompt
         run: bun ci-cd/redteam/sync-prompt.ts --check
       - name: ACL / injection / guardrail / audit red-team harness
         run: bun ci-cd/acl-redteam/harness.ts
@@ -241,7 +241,7 @@ jobs:
         with:
           persist-credentials: false
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
-      # promptfoo must run under real Node: via bunx on a host without Node it
+      # promptfoo must run under Node.js: via bunx on a host without Node it
       # falls back to Bun's runtime, which lacks undici's interceptors.decompress.
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
@@ -250,7 +250,7 @@ jobs:
         env:
           LLM_HOST: ${{ vars.LLM_HOST }}
         run: OLLAMA_URL="http://${LLM_HOST}:11434" bun ci-cd/scripts/verify-models.ts
-      - name: promptfoo red-team suite (gate, uses the real RAG system prompt)
+      - name: promptfoo red-team suite (gate, uses the RAG system prompt)
         env:
           GATEWAY_URL: http://${{ vars.LLM_HOST }}:4000
           GATEWAY_VIRTUAL_KEY: ${{ secrets.CI_GATEWAY_VIRTUAL_KEY }}

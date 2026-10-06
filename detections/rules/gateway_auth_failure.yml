@@ -7,7 +7,7 @@ description: >
   isn't a known virtual key. One hit is often just an expired/typo'd key --
   on its own this is a low-severity signal. Feeds the
   gateway_repeated_auth_failures correlation rule for the pattern that
-  actually matters (several in a short window from one source).
+  matters (several in a short window from one source).
 x-fixtures:
   - ../samples/gateway_auth_failure.jsonl
 author: Alicia Smith (Phrozyn)

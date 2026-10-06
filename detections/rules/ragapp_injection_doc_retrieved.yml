@@ -13,7 +13,7 @@ description: >
   corpus at ingest time, not from manual enumeration.
 x-fixtures:
   - ../samples/ragapp_audit.jsonl
-author: Phrozyn
+author: Alicia Smith (Phrozyn)
 date: '2026-10-01'
 logsource:
   product: ragapp

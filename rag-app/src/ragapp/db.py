@@ -1,5 +1,5 @@
 """pgvector-backed storage, in a dedicated `ragapp` database on the same
-Postgres instance the gateway already deployed — not a separate DB server.
+Postgres instance the gateway already deployed, not a separate DB server.
 """
 
 import os
@@ -63,14 +63,14 @@ def search(
     top_k: int = 3,
 ) -> list[dict]:
     """The ACL enforcement point. allowed_acl filters the SQL WHERE clause
-    itself — a chunk outside the caller's scope is never fetched from the
+    itself; a chunk outside the caller's scope is never fetched from the
     database, let alone considered for ranking. This is retrieval-time
     enforcement, not a post-hoc filter on an already-fetched result set.
     """
     # Explicit ::vector cast: with a bare `%s` here (no target-column context
     # the way INSERT has), psycopg adapts a Python list of floats to
     # `double precision[]` by default, which pgvector's `<=>` operator can't
-    # compare against — hit this live on the first real query.
+    # compare against; hit this live on the first real query.
     rows = conn.execute(
         """
         SELECT doc_id, acl, owner, content,

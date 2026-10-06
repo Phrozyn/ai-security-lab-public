@@ -11,7 +11,7 @@ description: >
   it from observed per-key traffic over a baseline period.
 x-fixtures:
   - ../samples/gateway_spend_logs.jsonl
-author: Phrozyn
+author: Alicia Smith (Phrozyn)
 date: '2026-10-01'
 correlation:
   type: event_count

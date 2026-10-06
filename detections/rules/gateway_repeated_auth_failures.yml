@@ -9,7 +9,7 @@ description: >
   production-tuned baseline.
 x-fixtures:
   - ../samples/gateway_auth_failure.jsonl
-author: Phrozyn
+author: Alicia Smith (Phrozyn)
 date: '2026-10-01'
 correlation:
   type: event_count

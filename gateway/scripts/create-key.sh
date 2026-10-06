@@ -34,5 +34,5 @@ else
 fi
 
 echo "" >&2
-echo "The generated 'key' field above is the caller's virtual key — hand it to" >&2
+echo "The generated 'key' field above is the caller's virtual key; hand it to" >&2
 echo "them directly, never log it, and it is separate from LITELLM_MASTER_KEY." >&2

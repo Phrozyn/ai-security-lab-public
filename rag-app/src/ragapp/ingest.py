@@ -1,6 +1,6 @@
 """Ingestion: read the corpus, one chunk per document (the corpus docs are
 short enough that paragraph-splitting would add complexity without adding a
-meaningful test of ACL enforcement — the point here is the ACL boundary, not
+meaningful test of ACL enforcement; the point here is the ACL boundary, not
 chunking strategy), embed, store with metadata.
 """
 

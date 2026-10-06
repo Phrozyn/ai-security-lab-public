@@ -11,7 +11,7 @@ description: >
   gateway_high_volume_completions correlation rule.
 x-fixtures:
   - ../samples/gateway_spend_logs.jsonl
-author: Phrozyn
+author: Alicia Smith (Phrozyn)
 date: '2026-10-01'
 logsource:
   product: litellm

@@ -1,6 +1,6 @@
 """Presidio-based redaction of retrieved context before it's assembled into
 the prompt sent to the model. Runs on retrieved chunks, not on the corpus at
-rest — the corpus documents keep their real content; only what crosses into
+rest: the corpus documents keep their real content; only what crosses into
 the model's context gets redacted.
 """
 

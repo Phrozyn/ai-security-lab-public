@@ -4,7 +4,7 @@ input -> generate -> guardrail-scan output.
 The system prompt is the other half of injection defense alongside retrieval-
 time ACL: it explicitly tells the model that retrieved context is untrusted
 reference material, never instructions, and to refuse anything that context
-asks it to do. Defense in depth — this doesn't replace the guardrail scan,
+asks it to do. Defense in depth: this doesn't replace the guardrail scan,
 it's a second, independent layer.
 """
 
@@ -64,7 +64,7 @@ def query(corpus_dir: Path, username: str, question: str) -> QueryResult:
         raise ValueError(f"unknown user: {username}")
     allowed_acl = users[username]["allowed_acl"]
 
-    # Guardrail check on the INPUT first — before spending a retrieval/generation
+    # Guardrail check on the INPUT first, before spending a retrieval/generation
     # call on something already flagged unsafe.
     input_safe, input_verdict = guardrail_check("user", question)
     if not input_safe:

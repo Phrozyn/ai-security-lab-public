@@ -1,4 +1,4 @@
-# Simulated users for the ACL-enforcement test. Not real accounts — this maps
+# Simulated users for the ACL-enforcement test. Not real accounts; this maps
 # a caller identity to which acl tags their retrieval queries are allowed to match.
 users:
   guest:

@@ -9,7 +9,7 @@ description: >
   someone probing admin functionality who doesn't know the real key schema.
 x-fixtures:
   - ../samples/gateway_key_generate_failure.jsonl
-author: Phrozyn
+author: Alicia Smith (Phrozyn)
 date: '2026-10-01'
 logsource:
   product: litellm

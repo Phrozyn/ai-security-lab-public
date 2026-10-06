@@ -10,7 +10,7 @@ description: >
   actually matters (several in a short window from one source).
 x-fixtures:
   - ../samples/gateway_auth_failure.jsonl
-author: Phrozyn
+author: Alicia Smith (Phrozyn)
 date: '2026-10-01'
 logsource:
   product: litellm

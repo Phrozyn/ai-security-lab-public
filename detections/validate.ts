@@ -168,7 +168,7 @@ for (const { file, rule } of loaded) {
     const isBase = !!rule.name && rule.level === "informational";
     const ok = matched.length > 0 && (isBase || unmatched.length > 0);
     console.log(
-      `${ok ? "PASS" : "FAIL"}  ${label}\n        ${matched.length}/${fixtures.length} fixture lines matched${isBase ? " (base rule — feeds a correlation; no true-negative required)" : " (true positive), " + unmatched.length + " did not (true negative)"}`,
+      `${ok ? "PASS" : "FAIL"}  ${label}\n        ${matched.length}/${fixtures.length} fixture lines matched${isBase ? " (base rule, feeds a correlation; no true-negative required)" : " (true positive), " + unmatched.length + " did not (true negative)"}`,
     );
     if (!ok) failures++;
   } else {

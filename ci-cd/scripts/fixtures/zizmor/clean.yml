@@ -1,0 +1,12 @@
+# Positive control for ci-cd/scripts/zizmor-gate.ts: zizmor must report nothing for this file.
+# Not a workflow of this repository (it is outside .github/workflows).
+name: zizmor control, must pass
+on: pull_request
+permissions: {}
+jobs:
+  control:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "$TITLE"
+        env:
+          TITLE: ${{ github.event.pull_request.title }}

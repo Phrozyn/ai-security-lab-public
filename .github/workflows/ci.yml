@@ -38,6 +38,32 @@ jobs:
           pip install --quiet sigma-cli==3.1.0
           sigma check detections/rules/
 
+  # ------------------------------------------------------------ workflow analysis
+  # zizmor: static analysis of the workflows and .github/dependabot.yml (template injection,
+  # excessive permissions, unpinned or impostor action refs, Dependabot cooldown). The gate
+  # runs zizmor on a fixture it must flag and a fixture it must pass before it scans the
+  # repository, so a run that reads no files fails instead of passing. GH_TOKEN enables the
+  # audits that query the GitHub API (impostor commits, known-vulnerable actions).
+  workflow-analysis:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - run: pip install --quiet zizmor==1.30.1
+      - name: Gate script tests
+        run: bun test ci-cd/scripts/zizmor-gate.test.ts
+      # The token is set on this step only, not on the install above.
+      - name: zizmor (with positive and negative controls)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bun ci-cd/scripts/zizmor-gate.ts
+
   # ------------------------------------------------------------------- secrets
   secrets:
     runs-on: ubuntu-latest
@@ -141,9 +167,10 @@ jobs:
           # The image string comes from the compose file; an expression inside the
           # script body would let a changed compose file inject shell.
           IMAGE: ${{ matrix.image }}
+          JOB_INDEX: ${{ strategy.job-index }}
         run: |
           docker pull --quiet "$IMAGE"
-          docker image inspect --format '{{index .RepoDigests 0}}' "$IMAGE" | tee "digest-${{ strategy.job-index }}.txt"
+          docker image inspect --format '{{index .RepoDigests 0}}' "$IMAGE" | tee "digest-${JOB_INDEX}.txt"
 
       - name: SBOM (Syft)
         uses: anchore/sbom-action@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
@@ -279,7 +306,7 @@ jobs:
   # and workflow identity -- so the job only runs when the repo is public.
   sign:
     if: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' && !github.event.repository.private }}
-    needs: [detections, secrets, model-supply-chain, images, supply-chain, python-deps, acl-redteam]
+    needs: [detections, workflow-analysis, secrets, model-supply-chain, images, supply-chain, python-deps, acl-redteam]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:

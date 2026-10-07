@@ -23,7 +23,7 @@ Instructions for AI coding agents and reviewers working in this repository. Huma
 ├── ci-cd/              merge gates and red-team suites
 │   ├── acl-redteam/harness.ts       CLI-level ACL, injection, guardrail, audit and privilege checks
 │   ├── redteam/                     promptfoo suites (gate, baseline, guardrail) and their prompt files
-│   ├── scripts/                     model-artifact policy, model lock, compose image listing, ModelScan gate
+│   ├── scripts/                     model-artifact policy, model lock, compose image listing, ModelScan gate, zizmor gate
 │   └── models.lock.json             pinned model digests
 ├── detections/         Sigma rules for gateway and RAG app logs
 │   ├── rules/                 8 rules
@@ -49,6 +49,7 @@ Commands (run from the repository root):
 | Compose and workflow images pinned by digest | `bun ci-cd/scripts/list-compose-images.ts` and `bun test ci-cd/scripts/list-compose-images.test.ts` |
 | Key-creation script | `bun test gateway/scripts/create-key.test.ts` (needs bash, curl, jq) |
 | Compose environment allowlist | `bun test gateway/docker-compose.test.ts` |
+| Workflow static analysis | `bun test ci-cd/scripts/zizmor-gate.test.ts`; `pipx run zizmor==1.30.1 --persona=regular .`; `bun ci-cd/scripts/zizmor-gate.ts` adds the controls (zizmor on PATH; without `GH_TOKEN` it runs offline and skips the audits that query the GitHub API) |
 | Model lock validation | `bun ci-cd/scripts/validate-models-lock.ts` |
 
 The live red-team suites need network access to `LLM_HOST`. The `redteam-live` CI job is skipped on repositories without a runner for it.

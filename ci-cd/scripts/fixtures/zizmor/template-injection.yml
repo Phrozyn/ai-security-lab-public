@@ -1,0 +1,10 @@
+# Negative control for ci-cd/scripts/zizmor-gate.ts: zizmor must flag this file.
+# Not a workflow of this repository (it is outside .github/workflows).
+name: zizmor control, must be flagged
+on: pull_request
+permissions: {}
+jobs:
+  control:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "${{ github.event.pull_request.title }}"

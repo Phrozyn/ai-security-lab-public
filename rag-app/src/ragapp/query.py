@@ -15,6 +15,7 @@ import yaml
 
 from ragapp import db
 from ragapp.audit import log_event
+from ragapp.context import build_user_message
 from ragapp.leakguard import leaks, prompt_shingles
 from ragapp.ollama_client import embed, generate, guardrail_check
 from ragapp.redact import redact
@@ -101,8 +102,7 @@ def query(corpus_dir: Path, username: str, question: str) -> QueryResult:
         redacted_chunks.append(f"[{h['doc_id']}] {redacted_text}")
         all_found_entities.update(found)
 
-    context_block = "\n\n".join(redacted_chunks) if redacted_chunks else "(no matching documents found for your access level)"
-    user_message = f"<retrieved_context>\n{context_block}\n</retrieved_context>\n\nQuestion: {question}"
+    user_message = build_user_message(redacted_chunks, question)
 
     answer = generate(SYSTEM_PROMPT, user_message)
 

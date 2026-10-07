@@ -16,6 +16,9 @@ cp .env.example .env
 # GATEWAY_DB_PASSWORD
 #   openssl rand -hex 32   (run twice, once per key)
 #   openssl rand -hex 24   (database passwords)
+# The litellm container receives only the variables docker-compose.yml lists (the two LiteLLM
+# keys, OLLAMA_BASE_URL and the gateway_app credentials in DATABASE_URL), not POSTGRES_USER or
+# POSTGRES_PASSWORD. A new variable needed by LiteLLM must be added to that list.
 
 # Postgres first, then the role LiteLLM connects as (psql 15+ runs inside the container):
 docker compose up -d postgres

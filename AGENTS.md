@@ -8,12 +8,13 @@ Instructions for AI coding agents and reviewers working in this repository. Huma
 .
 ├── gateway/            LLM gateway: LiteLLM in front of Ollama, Postgres-backed virtual keys
 │   ├── docker-compose.yml     images pinned by sha256 digest; litellm and postgres services
+│   ├── docker-compose.test.ts which .env variables reach which container
 │   ├── litellm_config.yaml    model routes, auth and logging settings
 │   ├── sql/gateway-role.sql   creates the non-superuser gateway_app role (run by a superuser)
 │   └── scripts/create-key.sh  issues a virtual key through the admin API
 ├── rag-app/            RAG app: retrieval-time ACL, redaction, guardrails, output leak guard
 │   ├── src/ragapp/            cli.py, query.py, ingest.py, db.py, ollama_client.py,
-│   │                          redact.py, leakguard.py, audit.py
+│   │                          redact.py, leakguard.py, audit.py, context.py
 │   ├── sql/roles.sql          query role, per-scope roles and row-level security on chunks
 │   ├── corpus/                test documents and users.yaml (users and allowed ACL scopes)
 │   ├── tests/                 unit tests (unittest-compatible)
@@ -47,6 +48,7 @@ Commands (run from the repository root):
 | Guardrail sync script tests | `bun test ci-cd/redteam/sync-guardrail-prompt.test.ts` |
 | Compose and workflow images pinned by digest | `bun ci-cd/scripts/list-compose-images.ts` and `bun test ci-cd/scripts/list-compose-images.test.ts` |
 | Key-creation script | `bun test gateway/scripts/create-key.test.ts` (needs bash, curl, jq) |
+| Compose environment allowlist | `bun test gateway/docker-compose.test.ts` |
 | Model lock validation | `bun ci-cd/scripts/validate-models-lock.ts` |
 
 The live red-team suites need network access to `LLM_HOST`. The `redteam-live` CI job is skipped on repositories without a runner for it.
@@ -54,7 +56,7 @@ The live red-team suites need network access to `LLM_HOST`. The `redteam-live` C
 ## Code Style and Conventions
 
 - **Languages.** Tooling, harnesses and scripts are TypeScript run with Bun (`bun`, `bunx`). Python is limited to `rag-app/`. Shell is limited to `gateway/scripts/`. SQL lives in `sql/` directories.
-- **Dependencies.** Python dependencies are declared in `rag-app/pyproject.toml` and locked with hashes in `rag-app/requirements-lock.txt`. Install with `--require-hashes`. GitHub Actions are pinned by commit SHA. Container images (the compose file and workflow services) are pinned by sha256 digest, and `ci-cd/scripts/list-compose-images.ts` fails on a runtime image (compose `services.*.image`, workflow `services.*.image`, `container`, `docker://` steps) that is not a static string pinned by digest, or on a workflow digest that differs from the compose digest. `bunx` tools are pinned to an exact version.
+- **Dependencies.** Python dependencies are declared in `rag-app/pyproject.toml` and locked with hashes in `rag-app/requirements-lock.txt`. Install with `--require-hashes`. GitHub Actions are pinned by commit SHA. Container images (the compose file and workflow services) are pinned by sha256 digest, and `ci-cd/scripts/list-compose-images.ts` fails on a runtime image (compose `services.*.image`, workflow `services.*.image`, `container`, `docker://` steps) that is not a static string pinned by digest or contains a character outside `[A-Za-z0-9._/:@-]`, or on a workflow digest that differs from the compose digest. `bunx` tools are pinned to an exact version.
 - **Fail loud.** Validators, harnesses and checks throw on any input they do not handle. A check names a positive control or an exact expectation, and the harness fails when fewer checks ran than expected (`EXPECTED_CHECKS` in `ci-cd/acl-redteam/harness.ts`). Do not add fallbacks that turn an unknown case into a pass.
 - **Tests.** Behavior changes come with a test in the same change. Do not weaken, skip or delete an assertion to make a test pass. Negative tests assert the exact error (for example, SQLSTATE `42501`).
 - **Generated files.** `ci-cd/redteam/prompt.json` and `prompt.guardrail.json` are generated from `rag-app/src/ragapp/query.py` and `ollama_client.py`. Edit the source, then run the matching `sync-*.ts` script. CI checks for drift.

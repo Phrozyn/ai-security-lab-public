@@ -94,6 +94,8 @@ jobs:
         run: bun test ci-cd/scripts/list-compose-images.test.ts
       - name: Key-creation script tests (stub gateway)
         run: bun test gateway/scripts/create-key.test.ts
+      - name: Compose environment allowlist tests
+        run: bun test gateway/docker-compose.test.ts
 
   supply-chain:
     needs: images
@@ -135,9 +137,13 @@ jobs:
           exit-code: "0"
 
       - name: Resolve image digest for provenance
+        env:
+          # The image string comes from the compose file; an expression inside the
+          # script body would let a changed compose file inject shell.
+          IMAGE: ${{ matrix.image }}
         run: |
-          docker pull --quiet "${{ matrix.image }}"
-          docker image inspect --format '{{index .RepoDigests 0}}' "${{ matrix.image }}" | tee "digest-${{ strategy.job-index }}.txt"
+          docker pull --quiet "$IMAGE"
+          docker image inspect --format '{{index .RepoDigests 0}}' "$IMAGE" | tee "digest-${{ strategy.job-index }}.txt"
 
       - name: SBOM (Syft)
         uses: anchore/sbom-action@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3

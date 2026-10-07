@@ -8,6 +8,8 @@
 //     compose variable (${VAR}) in one of these places fails, because its value
 //     can not be checked here. Keys elsewhere, such as strategy.matrix.image or
 //     the image input of an action, are not runtime declarations and are ignored.
+//   - a runtime image contains a character outside [A-Za-z0-9._/:@-], because the
+//     supply-chain job uses the ref as a shell argument.
 //   - a workflow pins the same image repository as the compose file with a
 //     different digest, so a Dependabot bump of the compose pin can not leave a
 //     stale second copy behind.
@@ -20,6 +22,9 @@ import { resolve } from "node:path";
 
 const DIGEST = /@sha256:([0-9a-f]{64})$/;
 const DOCKER_USES = "docker://";
+// Characters an image reference needs. Anything else (quotes, spaces, `;`, `$`, backticks)
+// is rejected because the ref is used as a shell argument and as a matrix value.
+const IMAGE_REF_CHARS = /^[A-Za-z0-9._\/:@-]+$/;
 
 type Decl = { where: string; value: unknown };
 type Mapping = Record<string, unknown>;
@@ -103,8 +108,10 @@ export function declaredImages(
       errors.push(`${where}: image is missing or not a string`);
     } else if (value.includes("${")) {
       errors.push(`${where}: image must be a static string, found ${JSON.stringify(value)}`);
+    } else if (!IMAGE_REF_CHARS.test(value)) {
+      errors.push(`${where}: image contains characters outside [A-Za-z0-9._/:@-], found ${JSON.stringify(value)}`);
     } else {
-      images.push({ file: where, image: value.trim() });
+      images.push({ file: where, image: value });
     }
   }
   return { images, errors };

@@ -35,8 +35,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    env_file:
-      - .env
     # Host networking, not the default bridge: Ollama listens on the HOST's
     # own address (127.0.0.1:11434 by default; see OLLAMA_BASE_URL in .env).
     # A bridge-network container's gateway IP is not the same as the host's
@@ -47,7 +45,12 @@ services:
     # port-publish mechanism, hence the `--host 127.0.0.1` below, so the
     # gateway itself doesn't end up LAN-reachable as a side effect of this change.
     network_mode: host
+    # Variables are listed one by one, not passed with env_file, so the Postgres
+    # bootstrap superuser credentials in .env (POSTGRES_USER, POSTGRES_PASSWORD) never
+    # reach this container. gateway/docker-compose.test.ts checks this.
     environment:
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:?set LITELLM_MASTER_KEY in .env}
+      LITELLM_SALT_KEY: ${LITELLM_SALT_KEY:?set LITELLM_SALT_KEY in .env}
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://127.0.0.1:11434}
       # LiteLLM connects as the non-superuser gateway_app role (gateway/sql/gateway-role.sql),
       # not as the Postgres bootstrap superuser in POSTGRES_USER.

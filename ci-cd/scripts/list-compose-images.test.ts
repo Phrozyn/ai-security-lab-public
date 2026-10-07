@@ -79,6 +79,43 @@ describe("compose declarations", () => {
     expect(dc("services:\n  db:\n    image: ${DB_IMAGE:-postgres}\n").errors[0]).toContain("must be a static string");
   });
 
+  test("shell metacharacters in an image ref fail with the exact path and value", () => {
+    for (const bad of ['x";id;#', "x$(id)", "x`id`", "x y", "x'y", "x|y", "x&y", "x\\y"]) {
+      const ref = `${bad}@sha256:${A}`;
+      const r = dc(`services:\n  db:\n    image: ${JSON.stringify(ref)}\n`);
+      expect(r.images).toEqual([]);
+      expect(r.errors).toEqual([
+        `docker-compose.yml: services.db.image: image contains characters outside [A-Za-z0-9._/:@-], found ${JSON.stringify(ref)}`,
+      ]);
+    }
+  });
+
+  test("leading or trailing whitespace in a quoted image fails; it is not trimmed away", () => {
+    for (const ref of [` img:tag@sha256:${A}`, `img:tag@sha256:${A} `, `img:tag@sha256:${A}\n`, `\timg:tag@sha256:${A}`]) {
+      const r = dc(`services:\n  db:\n    image: ${JSON.stringify(ref)}\n`);
+      expect(r.images).toEqual([]);
+      expect(r.errors).toEqual([
+        `docker-compose.yml: services.db.image: image contains characters outside [A-Za-z0-9._/:@-], found ${JSON.stringify(ref)}`,
+      ]);
+    }
+  });
+
+  test("a workflow image with shell metacharacters fails the same way", () => {
+    const ref = `x";id;#@sha256:${A}`;
+    const r = wf(`jobs:\n  t:\n    services:\n      s:\n        image: ${JSON.stringify(ref)}\n`);
+    expect(r.images).toEqual([]);
+    expect(r.errors).toEqual([
+      `ci.yml: jobs.t.services.s.image: image contains characters outside [A-Za-z0-9._/:@-], found ${JSON.stringify(ref)}`,
+    ]);
+  });
+
+  test("registry host, port, mixed-case tag and digest are accepted", () => {
+    const ref = `registry.example:5000/team/app:V1.2_rc-1@sha256:${A}`;
+    const r = dc(`services:\n  db:\n    image: ${ref}\n`);
+    expect(r.errors).toEqual([]);
+    expect(r.images.map((i) => i.image)).toEqual([ref]);
+  });
+
   test("a compose file without services throws", () => {
     expect(() => dc("version: '3'\n")).toThrow("no services mapping");
   });

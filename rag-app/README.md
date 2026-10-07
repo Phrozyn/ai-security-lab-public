@@ -37,14 +37,15 @@ One document, `vendor-integration-notes.md`, is tagged `public` but carries a pl
 
 ## Setup
 
-LLM_HOST uses `pyenv` (installed there) rather than `uv` for this component: a plain stdlib `venv` off a pyenv-managed Python was simpler than adding another tool once pip was working:
+LLM_HOST uses `uv` for this component. The environment is built from the hash-locked `requirements-lock.txt` (compiled on Python 3.12):
 
 ```bash
 cd rag-app
-pyenv local 3.12.11        # or any >=3.11 pyenv version installed
-python3 -m venv .venv
-.venv/bin/pip install -e .
-python3 -m spacy download en_core_web_lg   # Presidio's NLP engine needs this separately
+uv venv --python 3.12 .venv
+uv pip install --python .venv/bin/python --require-hashes -r requirements-lock.txt
+uv pip install --python .venv/bin/python --no-deps -e .
+# Presidio's NLP engine needs the spaCy model, which is not in the lock
+uv pip install --python .venv/bin/python https://github.com/explosion/spacy-models/releases/download/en_core_web_lg-3.8.0/en_core_web_lg-3.8.0-py3-none-any.whl
 
 cp .env.example .env   # populated on LLM_HOST
 .venv/bin/python -m ragapp.cli ingest

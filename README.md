@@ -22,7 +22,7 @@ LLM_HOST (`<gateway_ip>:<port>`, Nvidia GPU, Linux, Ollama) is the runtime host.
 
 1. **Gateway** (done, deployed): the highest-leverage single artifact; everything else logs through it.
 2. **RAG app** (done, tested): retrieval ACL + redaction + guardrails, live-tested including an injection attempt.
-3. **CI/CD pipeline** (done): SHA-pinned Actions workflow gating every push/PR; negative-tested; live red-team gate runs on a self-hosted runner; signing has not run yet (see `ci-cd/README.md`).
+3. **CI/CD pipeline** (done): SHA-pinned Actions workflow gating every push/PR; negative-tested; live red-team gate runs on a self-hosted runner; signing runs on pushes to main (see `ci-cd/README.md`).
 4. **Detections** (done): 8 Sigma rules against the gateway's and RAG app's logs, fixture-verified and cross-checked with `pySigma`.
 5. **Docs** (done): threat model written early against the system, now joined by model cards and a data card covering every model and dataset in use.
 

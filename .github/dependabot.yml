@@ -1,4 +1,6 @@
 version: 2
+# cooldown: a version update is proposed once the release is 7 days old, which gives a
+# compromised release time to be reported. Security updates are not delayed by it.
 updates:
   # Compose image digests: a bump arrives as a PR and runs the full gate set
   # (Trivy/Grype/harness) before it can merge.
@@ -6,8 +8,12 @@ updates:
     directory: /gateway
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
   # SHA-pinned actions: Dependabot rewrites the SHA and the version comment.
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7

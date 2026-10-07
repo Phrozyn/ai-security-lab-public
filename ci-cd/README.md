@@ -26,7 +26,7 @@ GitHub Actions pipeline (`.github/workflows/ci.yml`) that gates every push to `m
 - **`verify-models.ts` against the live host (2026-10-05):** llama-guard3 and nomic-embed-text matched the registry digests exactly (confirming the digest definition), while gemma4:e2b and qwen3.8 did not, because upstream republished those tags after the 9/29 pull. The lock now records the deployed digests, with the newer registry digests noted. deepseek-v3 is served by Ollama but unlocked (unrouted). The check also runs in `redteam-live` on each push to `main`.
 
 **Not yet run:**
-- `sign` is **skipped** while the repo is private. Keyless cosign writes to the public Rekor transparency log, which would disclose this private repo's name and workflow identity. It is gated on `!github.event.repository.private`, and its sign-then-verify step has not run.
+- `sign` has not run. It runs on pushes to `main` once the repository is public (it is gated on `!github.event.repository.private`). It signs the model lock and SBOMs with keyless cosign, then verifies its own signatures. Keyless signing writes the repository name and workflow identity to the public Rekor transparency log.
 
 ## Live red-team gate: how it runs
 

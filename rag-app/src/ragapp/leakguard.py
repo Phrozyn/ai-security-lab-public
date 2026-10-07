@@ -31,5 +31,32 @@ def prompt_shingles(prompt: str) -> set[tuple[str, ...]]:
     return shingles
 
 
-def leaks(answer: str, shingles: set[tuple[str, ...]]) -> bool:
-    return not shingles.isdisjoint(_shingles(_words(answer)))
+def _squash(text: str) -> str:
+    return re.sub(r"[^a-z0-9]", "", text.lower())
+
+
+def leaks(
+    answer: str,
+    shingles: set[tuple[str, ...]],
+    tripwires: tuple[str, ...] = (),
+) -> bool:
+    """True if the answer holds a verbatim prompt run or any tripwire marker.
+
+    The shingle check only sees English text copied from the prompt. A
+    translation or other transformation shares no 12-word run with it, but an
+    identifier such as a tripwire marker is carried through unchanged, so the
+    marker check is language-independent. Markers are compared with everything
+    except letters and digits removed, which also matches spaced or hyphen-split
+    copies.
+    """
+    if not shingles.isdisjoint(_shingles(_words(answer))):
+        return True
+    squashed = _squash(answer)
+    for marker in tripwires:
+        key = _squash(marker)
+        if not key:
+            # An empty marker would match every answer.
+            raise ValueError("empty tripwire marker")
+        if key in squashed:
+            return True
+    return False

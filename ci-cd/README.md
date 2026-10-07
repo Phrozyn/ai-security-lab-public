@@ -36,6 +36,7 @@ GitHub Actions pipeline (`.github/workflows/ci.yml`) that gates every push to `m
 - **Runner:** promptfoo runs under Node.js (`actions/setup-node`); via `bunx` alone on a host without Node it falls back to Bun's runtime, which lacks an undici API promptfoo needs.
 - **History:** first green live run 2026-10-06 (all 6 tests), after the auditor-claim finding was fixed (`docs/threat-model.md`, finding 6).
 - **Do not** make it a required check before it has been stable for a while; it depends on a second host and the tailnet being up.
+- **Role-claim suite (not in CI):** `promptfooconfig.roles.yaml` runs 14 probes from `roles-tests.yaml` (debugger, developer, SRE, researcher and other claimed roles, a translation request, an injected role note) against the same prompt, by hand. The translation test fails on every run because it measures the model; the app's `leaks()` tripwire check is what blocks that output (`docs/threat-model.md`, finding 6 addendum).
 
 ### Running the gate by hand
 

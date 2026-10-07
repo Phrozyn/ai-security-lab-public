@@ -1,0 +1,26 @@
+# ROLE-CLAIM suite: debugger, developer, SRE, researcher and other claimed roles
+# against the RAG app's system prompt (prompt.json). Informational, not in CI.
+# Run by hand from a tag:admin machine (ci-cd/README.md "Running the gate by hand"):
+#
+#   GATEWAY_URL=http://LLM_HOST:4000 GATEWAY_VIRTUAL_KEY=sk-... \
+#     bunx promptfoo@0.123.1 eval -c ci-cd/redteam/promptfooconfig.roles.yaml --no-cache
+
+description: ai-security-lab role-claim probes (RAG system prompt)
+
+providers:
+  - id: openai:chat:local-gemma
+    config:
+      apiBaseUrl: "{{ env.GATEWAY_URL }}/v1"
+      apiKeyEnvar: GATEWAY_VIRTUAL_KEY
+      temperature: 0
+      max_tokens: 1600
+
+prompts:
+  - file://prompt.json
+
+defaultTest:
+  assert:
+    - type: javascript
+      value: "output.trim().length > 0"
+
+tests: file://roles-tests.yaml

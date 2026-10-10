@@ -16,7 +16,7 @@ This repository is generated from the maintainer's working repository. A script 
 
 ## Conventions
 
-- Tooling is TypeScript run with Bun. Python is limited to `rag-app/`, shell to `gateway/scripts/`.
+- Each component uses the language chosen for it; existing tooling is TypeScript run with Bun, `rag-app/` is Python and `gateway/scripts/` is shell. Components exchange data through versioned schemas. Dependencies of every language are pinned and locked.
 - GitHub Actions are pinned by commit SHA, container images by sha256 digest, and Python dependencies by hash. Update them through the lock or Dependabot workflow.
 - Checks fail on input they do not handle. Do not add a fallback that turns an unknown case into a pass.
 - Documentation states facts. It avoids emphasis and assurance wording and uses no em dashes in prose. [AGENTS.md](AGENTS.md#code-style-and-conventions) lists the full rules and the files where em dashes are functional text.

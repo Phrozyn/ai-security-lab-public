@@ -1,5 +1,5 @@
 // zizmor over this repository's workflows and Dependabot config, with controls.
-// zizmor must be on PATH (pip install zizmor==<version>).
+// zizmor must be on PATH (uv pip install zizmor==<version> into the job virtual environment).
 //
 // zizmor exit codes: 0 = no findings, 11 to 14 = findings by severity, 1 = error, 3 = no inputs.
 // The gate first proves the template-injection audit fires and that a clean file passes:

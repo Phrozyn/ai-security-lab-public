@@ -27,15 +27,27 @@ jobs:
         with:
           persist-credentials: false
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      # uv, pinned by version and archive checksum, creates a per-job virtual environment in
+      # RUNNER_TEMP (removed with the job) from a host Python 3.12, or from a uv-managed build
+      # when the host has none. setup-python downloads only builds for the platforms in its
+      # manifest, which does not cover every self-hosted runner.
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
-          python-version: "3.12"
+          version: "0.12.22"
+          checksum: "b9980552309f09c15172b8be828555e375097f16deb459795ce7bfd200380f0b"
+          enable-cache: false
+      - name: Python 3.12 virtual environment (uv)
+        run: |
+          uv --version
+          uv venv --python 3.12 "$RUNNER_TEMP/venv"
+          echo "VIRTUAL_ENV=$RUNNER_TEMP/venv" >> "$GITHUB_ENV"
+          echo "$RUNNER_TEMP/venv/bin" >> "$GITHUB_PATH"
       # Two independent checks: the fixture-replay harness proves the rules fire
       # on captured events; pySigma (the authoritative implementation of the
       # Sigma spec) proves the rules are valid Sigma.
       - run: bun detections/validate.ts
       - run: |
-          pip install --quiet sigma-cli==3.1.0
+          uv pip install --quiet sigma-cli==3.1.0
           sigma check detections/rules/
 
   # ------------------------------------------------------------ workflow analysis
@@ -52,10 +64,22 @@ jobs:
         with:
           persist-credentials: false
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      # uv, pinned by version and archive checksum, creates a per-job virtual environment in
+      # RUNNER_TEMP (removed with the job) from a host Python 3.12, or from a uv-managed build
+      # when the host has none. setup-python downloads only builds for the platforms in its
+      # manifest, which does not cover every self-hosted runner.
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
-          python-version: "3.12"
-      - run: pip install --quiet zizmor==1.30.1
+          version: "0.12.22"
+          checksum: "b9980552309f09c15172b8be828555e375097f16deb459795ce7bfd200380f0b"
+          enable-cache: false
+      - name: Python 3.12 virtual environment (uv)
+        run: |
+          uv --version
+          uv venv --python 3.12 "$RUNNER_TEMP/venv"
+          echo "VIRTUAL_ENV=$RUNNER_TEMP/venv" >> "$GITHUB_ENV"
+          echo "$RUNNER_TEMP/venv/bin" >> "$GITHUB_PATH"
+      - run: uv pip install --quiet zizmor==1.30.1
       - name: Gate script tests
         run: bun test ci-cd/scripts/zizmor-gate.test.ts
       # The token is set on this step only, not on the install above.
@@ -89,16 +113,28 @@ jobs:
         with:
           persist-credentials: false
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      # uv, pinned by version and archive checksum, creates a per-job virtual environment in
+      # RUNNER_TEMP (removed with the job) from a host Python 3.12, or from a uv-managed build
+      # when the host has none. setup-python downloads only builds for the platforms in its
+      # manifest, which does not cover every self-hosted runner.
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
-          python-version: "3.12"
+          version: "0.12.22"
+          checksum: "b9980552309f09c15172b8be828555e375097f16deb459795ce7bfd200380f0b"
+          enable-cache: false
+      - name: Python 3.12 virtual environment (uv)
+        run: |
+          uv --version
+          uv venv --python 3.12 "$RUNNER_TEMP/venv"
+          echo "VIRTUAL_ENV=$RUNNER_TEMP/venv" >> "$GITHUB_ENV"
+          echo "$RUNNER_TEMP/venv/bin" >> "$GITHUB_PATH"
       - name: No serialized model artifacts in the repo
         run: bun ci-cd/scripts/check-model-artifacts.ts
       - name: Model lock is well-formed and matches the deployed config
         run: bun ci-cd/scripts/validate-models-lock.ts
       - name: ModelScan (with negative/positive controls)
         run: |
-          pip install --quiet modelscan==0.8.8
+          uv pip install --quiet modelscan==0.8.8
           bun ci-cd/scripts/modelscan-gate.ts
 
   # ------------------------------------------------------------ container / deps
@@ -246,18 +282,28 @@ jobs:
         with:
           persist-credentials: false
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      # uv, pinned by version and archive checksum, creates a per-job virtual environment in
+      # RUNNER_TEMP (removed with the job) from a host Python 3.12, or from a uv-managed build
+      # when the host has none. setup-python downloads only builds for the platforms in its
+      # manifest, which does not cover every self-hosted runner.
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
-          python-version: "3.12"
-          cache: pip
-          cache-dependency-path: rag-app/requirements-lock.txt
+          version: "0.12.22"
+          checksum: "b9980552309f09c15172b8be828555e375097f16deb459795ce7bfd200380f0b"
+          enable-cache: false
+      - name: Python 3.12 virtual environment (uv)
+        run: |
+          uv --version
+          uv venv --python 3.12 "$RUNNER_TEMP/venv"
+          echo "VIRTUAL_ENV=$RUNNER_TEMP/venv" >> "$GITHUB_ENV"
+          echo "$RUNNER_TEMP/venv/bin" >> "$GITHUB_PATH"
       - name: Install rag-app from the hash-pinned lock
         run: |
-          python -m pip install --quiet --require-hashes -r rag-app/requirements-lock.txt
+          uv pip install --quiet --require-hashes -r rag-app/requirements-lock.txt
           # Presidio's NLP model, pinned by URL and sha256 (not `spacy download`).
           printf '%s\n' 'en_core_web_lg @ https://github.com/explosion/spacy-models/releases/download/en_core_web_lg-3.8.0/en_core_web_lg-3.8.0-py3-none-any.whl --hash=sha256:293e9547a655b25499198ab15a525b05b9407a75f10255e405e8c3854329ab63' > /tmp/spacy-model.txt
-          python -m pip install --quiet --require-hashes --no-deps -r /tmp/spacy-model.txt
-          python -m pip install --quiet --no-deps -e rag-app
+          uv pip install --quiet --require-hashes --no-deps -r /tmp/spacy-model.txt
+          uv pip install --quiet --no-deps -e rag-app
       - name: Live red-team prompt has not drifted from the RAG system prompt
         run: bun ci-cd/redteam/sync-prompt.ts --check
       - name: Guardrail test prompt has not drifted from guardrail_check()

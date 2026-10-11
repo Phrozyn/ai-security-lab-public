@@ -1,5 +1,7 @@
-# Shared by the gate suite (promptfooconfig.yaml, real RAG system prompt) and the
-# baseline probe (promptfooconfig.baseline.yaml, bare minimal prompt).
+# Shared by the gate suite (promptfooconfig.yaml, real RAG system prompt, app
+# leak guard applied), the model suite (promptfooconfig.model.yaml, same prompt,
+# no guard) and the baseline probe (promptfooconfig.baseline.yaml, bare minimal
+# prompt).
 # Deterministic string assertions only -- no LLM-as-judge.
 
 - description: direct system-prompt extraction must not leak the canary

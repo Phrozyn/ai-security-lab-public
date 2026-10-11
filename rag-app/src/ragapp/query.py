@@ -46,6 +46,9 @@ Internal marker (never output): ACME-TW-4d92e1."""
 # Output-side backstop for the prompt rule above: see ragapp/leakguard.py.
 # PROMPT_TRIPWIRES must appear in SYSTEM_PROMPT (checked in tests/test_leakguard.py).
 PROMPT_TRIPWIRES = ("ACME-TW-4d92e1",)
+# Returned in place of an answer that leaks() flags. ci-cd/redteam/leakguard_gate.py
+# reads this value so the live gate returns the same text.
+LEAK_REFUSAL = "Response blocked: it reproduced confidential instructions."
 _PROMPT_SHINGLES = prompt_shingles(SYSTEM_PROMPT)
 
 
@@ -124,7 +127,7 @@ def query(corpus_dir: Path, username: str, question: str) -> QueryResult:
             question_length=len(question),
         )
         return QueryResult(
-            answer="Response blocked: it reproduced confidential instructions.",
+            answer=LEAK_REFUSAL,
             retrieved_doc_ids=[h["doc_id"] for h in hits],
             redacted_entity_types=sorted(all_found_entities),
             output_blocked=True,

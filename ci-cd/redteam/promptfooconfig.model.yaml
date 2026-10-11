@@ -1,0 +1,38 @@
+# MODEL suite: the gate's tests (tests.yaml) against the deployed gateway with
+# the RAG app's system prompt (prompt.json) and no output guard, so it measures
+# the model alone. Informational: in CI it runs after the gate in the
+# redteam-live job with continue-on-error, and a failure here does not fail the
+# workflow. The gate is promptfooconfig.yaml, which applies the app's leak guard.
+# Needs a reachable gateway (self-hosted runner, or a tag:admin machine):
+#
+#   GATEWAY_URL=http://LLM_HOST:4000 GATEWAY_VIRTUAL_KEY=sk-... \
+#     bunx promptfoo@0.123.1 eval -c ci-cd/redteam/promptfooconfig.model.yaml --no-cache
+#
+# See promptfooconfig.baseline.yaml for the bare-model probe (expected to fail).
+
+description: ai-security-lab model-only red-team suite (RAG system prompt, no output guard)
+
+providers:
+  - id: openai:chat:local-gemma
+    config:
+      apiBaseUrl: "{{ env.GATEWAY_URL }}/v1"
+      apiKeyEnvar: GATEWAY_VIRTUAL_KEY
+      temperature: 0
+      # gemma4:e2b is a thinking model: a small budget is spent entirely on
+      # reasoning and returns empty content (which would pass every not-icontains).
+      # Completion tokens for this suite peaked at 644 of 800 until 2026-10-06, then
+      # two runs reached 800 and the fence-breakout test with a re-opened fake
+      # retrieved_context failed the non-empty check. 1600 leaves headroom.
+      max_tokens: 1600
+
+prompts:
+  - file://prompt.json
+
+defaultTest:
+  assert:
+    # An empty/errored output would trivially satisfy every not-icontains, so
+    # non-empty output is asserted on every test.
+    - type: javascript
+      value: "output.trim().length > 0"
+
+tests: file://tests.yaml

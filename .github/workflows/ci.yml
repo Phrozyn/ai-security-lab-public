@@ -315,8 +315,8 @@ jobs:
         run: bun ci-cd/acl-redteam/harness.ts
       - name: System-prompt leak guard (deterministic output backstop)
         run: python -m unittest discover -s rag-app/tests -v
-      - name: Live-gate leak-guard provider tests (fake gateway)
-        run: bun test ci-cd/redteam/guarded-gateway-provider.test.ts
+      - name: Live-gate leak-guard, replay and report tests (fake gateway)
+        run: bun test ci-cd/redteam/guarded-gateway-provider.test.ts ci-cd/redteam/replay-provider.test.ts
 
   # ------------------------------------------------------- live model red-team
   # Needs the deployed gateway on LLM_HOST, reachable only from a private network, so it
@@ -327,8 +327,8 @@ jobs:
   redteam-live:
     if: ${{ vars.LLM_HOST_RUNNER == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     runs-on: [self-hosted, CI_RUNNER]
-    # Two live suites of about 6 minutes each.
-    timeout-minutes: 35
+    # One live suite of about 6 minutes; the model-only suite replays its answers.
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -361,19 +361,20 @@ jobs:
         env:
           GATEWAY_URL: http://${{ vars.LLM_HOST }}:4000
           GATEWAY_VIRTUAL_KEY: ${{ secrets.CI_GATEWAY_VIRTUAL_KEY }}
-        run: bunx promptfoo@0.123.1 eval -c ci-cd/redteam/promptfooconfig.yaml --no-cache -o "$RUNNER_TEMP/redteam-gate.json"
-      - name: Answers the app leak guard replaced
-        if: ${{ !cancelled() && steps.gate.outcome != 'skipped' }}
-        run: bun ci-cd/redteam/report-leakguard.ts "$RUNNER_TEMP/redteam-gate.json"
-      # Same tests against the model with no guard. Informational: the model's
-      # own leak rate, shown next to the gate result. Does not fail the job.
-      - name: promptfoo red-team suite (model only, informational)
+        # REDTEAM_RECORD: each test's raw and guarded answer, for the model-only suite.
+        run: REDTEAM_RECORD="$RUNNER_TEMP/redteam-answers.jsonl" bunx promptfoo@0.123.1 eval -c ci-cd/redteam/promptfooconfig.yaml --no-cache -o "$RUNNER_TEMP/redteam-gate.json"
+      # The same tests on the raw answers the gate recorded, with no guard.
+      # Informational: the model's own leak rate on the same generation. Makes
+      # no model call. Does not fail the job.
+      - name: promptfoo red-team suite (model only, gate's raw answers, informational)
         if: ${{ !cancelled() && steps.gate.outcome != 'skipped' }}
         continue-on-error: true
-        env:
-          GATEWAY_URL: http://${{ vars.LLM_HOST }}:4000
-          GATEWAY_VIRTUAL_KEY: ${{ secrets.CI_GATEWAY_VIRTUAL_KEY }}
-        run: bunx promptfoo@0.123.1 eval -c ci-cd/redteam/promptfooconfig.model.yaml --no-cache
+        run: REDTEAM_REPLAY="$RUNNER_TEMP/redteam-answers.jsonl" bunx promptfoo@0.123.1 eval -c ci-cd/redteam/promptfooconfig.model.yaml --no-cache -o "$RUNNER_TEMP/redteam-model.json"
+      # Fails only if the two outputs do not cover the same tests and answers,
+      # or the model-only suite could not replay an answer.
+      - name: Raw and guarded verdicts per test
+        if: ${{ !cancelled() && steps.gate.outcome != 'skipped' }}
+        run: bun ci-cd/redteam/report-leakguard.ts "$RUNNER_TEMP/redteam-gate.json" "$RUNNER_TEMP/redteam-model.json"
 
   # --------------------------------------------------------------------- signing
   # Keyless cosign (GitHub OIDC -> Fulcio). Keyless signatures are written to the

@@ -4,13 +4,13 @@
 //
 //   bun test ci-cd/redteam/guarded-gateway-provider.test.ts
 
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import GuardedGatewayProvider, { applyLeakGuard, MAX_TOKENS, MODEL, parseMessages, TEMPERATURE } from "./guarded-gateway-provider.ts";
-import { summarize } from "./report-leakguard.ts";
+import GuardedGatewayProvider, { applyLeakGuard, MAX_TOKENS, MODEL, parseMessages, promptSha256, TEMPERATURE } from "./guarded-gateway-provider.ts";
+import { contrast, type Result } from "./report-leakguard.ts";
 
 const promptJson = readFileSync(resolve(import.meta.dir, "prompt.json"), "utf8");
 const systemPrompt: string = JSON.parse(promptJson)[0].content;
@@ -96,28 +96,69 @@ describe("leakguard_gate.py", () => {
   });
 });
 
-describe("report-leakguard.ts summarize", () => {
-  const meta = (leakBlocked: boolean) => ({ metadata: { leakBlocked, rawOutput: "x" } });
+describe("report-leakguard.ts contrast", () => {
+  const gateRow = (description: string, success: boolean, rawOutput: string, leakBlocked: boolean): Result => ({
+    success,
+    testCase: { description },
+    response: { output: leakBlocked ? leakRefusal : rawOutput, metadata: { leakBlocked, rawOutput } },
+  });
+  const modelRow = (description: string, success: boolean, output: string): Result => ({ success, testCase: { description }, response: { output } });
 
-  test("counts blocked answers", () => {
-    const s = summarize([
-      { success: true, testCase: { description: "a" }, response: meta(true) },
-      { success: false, error: "Expected output to contain \"600\"", testCase: { description: "b" }, response: meta(false) },
-    ]);
-    expect([s.blocked, s.total]).toEqual([1, 2]);
-    expect(s.lines.slice(2)).toEqual(["| a | yes | PASS |", "| b | no | FAIL |"]);
+  test("prints model, guard and gate verdicts per test and counts them", () => {
+    const c = contrast(
+      [gateRow("leak", true, CI_LEAK, true), gateRow("rate", false, BENIGN, false)],
+      [modelRow("rate", false, BENIGN), modelRow("leak", false, CI_LEAK)],
+    );
+    expect(c.lines.slice(2)).toEqual(["| leak | FAIL | yes | PASS |", "| rate | FAIL | no | FAIL |"]);
+    expect([c.total, c.blocked, c.modelFailed, c.gateFailed]).toEqual([2, 1, 2, 1]);
   });
 
-  test("lists a result with no response as a provider error", () => {
-    expect(summarize([{ success: false, error: "Provider call failed" }]).lines[2]).toBe("| result 0 | no answer (provider error) | ERROR |");
+  test("a gate provider error with no model answer is listed, not thrown", () => {
+    const c = contrast(
+      [{ success: false, error: "Provider call failed", testCase: { description: "a" } }],
+      [{ success: false, error: 'Error: answers.jsonl has no recorded answer for "a"', testCase: { description: "a" } }],
+    );
+    expect(c.lines[2]).toBe("| a | no answer | no answer (provider error) | ERROR |");
+    expect(c.gateFailed).toBe(1);
   });
 
-  test("throws on a failed assertion whose response has no guard metadata", () => {
-    expect(() => summarize([{ success: false, error: "Expected output to contain \"600\"", response: {} }])).toThrow("guarded-gateway-provider.ts");
+  test("throws when a gate provider error pairs with any other model-only error", () => {
+    const gateError = [{ success: false, error: "Provider call failed", testCase: { description: "a" } }];
+    expect(() => contrast(gateError, [{ success: false, error: "prompt differs", testCase: { description: "a" } }])).toThrow("should be the no-record error");
+    expect(() => contrast(gateError, [{ success: false, testCase: { description: "a" } }])).toThrow("should be the no-record error");
+  });
+
+  test("throws on a result with no boolean success", () => {
+    expect(() => contrast([{ ...gateRow("a", true, BENIGN, false), success: undefined }], [modelRow("a", true, BENIGN)])).toThrow("no boolean success");
+  });
+
+  test("escapes | in a description", () => {
+    expect(contrast([gateRow("a|b", true, BENIGN, false)], [modelRow("a|b", true, BENIGN)]).lines[2]).toBe("| a\\|b | PASS | no | PASS |");
+  });
+
+  test("throws when the model-only answer is not the gate's raw answer", () => {
+    expect(() => contrast([gateRow("a", true, BENIGN, false)], [modelRow("a", true, `${BENIGN} `)])).toThrow("not the raw answer the gate recorded");
+  });
+
+  test("throws when the model-only suite has an error result for a recorded answer", () => {
+    expect(() => contrast([gateRow("a", true, BENIGN, false)], [{ success: false, error: "prompt differs", testCase: { description: "a" } }])).toThrow("did not score");
+  });
+
+  test("throws when the outputs list different tests", () => {
+    expect(() => contrast([gateRow("a", true, BENIGN, false)], [modelRow("b", true, BENIGN)])).toThrow("different tests");
+  });
+
+  test("throws on a duplicate description", () => {
+    expect(() => contrast([gateRow("a", true, BENIGN, false), gateRow("a", true, BENIGN, false)], [modelRow("a", true, BENIGN)])).toThrow("two results");
+  });
+
+  test("throws on a gate result with no guard metadata", () => {
+    expect(() => contrast([{ success: true, testCase: { description: "a" }, response: { output: BENIGN } }], [modelRow("a", true, BENIGN)])).toThrow("guarded-gateway-provider.ts");
   });
 
   test("throws on no results", () => {
-    expect(() => summarize([])).toThrow("no results");
+    expect(() => contrast([], [modelRow("a", true, BENIGN)])).toThrow("gate output has no results");
+    expect(() => contrast([gateRow("a", true, BENIGN, false)], [])).toThrow("model-only output has no results");
   });
 });
 
@@ -198,5 +239,60 @@ describe("callApi against a fake gateway", () => {
     } finally {
       process.env.GATEWAY_VIRTUAL_KEY = "sk-test";
     }
+  });
+
+  describe("with REDTEAM_RECORD", () => {
+    let dir: string;
+    let file: string;
+    const ctx = (description: unknown) => ({ test: { description } });
+
+    beforeEach(() => {
+      dir = mkdtempSync(join(tmpdir(), "redteam-record-"));
+      file = join(dir, "answers.jsonl");
+      process.env.REDTEAM_RECORD = file;
+    });
+
+    afterEach(() => {
+      delete process.env.REDTEAM_RECORD;
+      rmSync(dir, { recursive: true, force: true });
+    });
+
+    const lines = () => readFileSync(file, "utf8").trimEnd().split("\n").map((l) => JSON.parse(l));
+
+    test("appends one record per call with the raw and guarded answer", async () => {
+      reply = answer(CI_LEAK);
+      await new GuardedGatewayProvider().callApi(prompt, ctx("leak"));
+      reply = answer(BENIGN);
+      await new GuardedGatewayProvider().callApi(prompt, ctx("rate"));
+      expect(lines()).toEqual([
+        { description: "leak", promptSha256: promptSha256(prompt), rawOutput: CI_LEAK, output: leakRefusal!, leakBlocked: true },
+        { description: "rate", promptSha256: promptSha256(prompt), rawOutput: BENIGN, output: BENIGN, leakBlocked: false },
+      ]);
+    });
+
+    test("throws before any request when the record file exists", async () => {
+      writeFileSync(file, "left over\n");
+      lastRequest = undefined;
+      await expect(new GuardedGatewayProvider().callApi(prompt, ctx("rate"))).rejects.toThrow("must not exist when the run starts");
+      expect(lastRequest).toBeUndefined();
+      expect(readFileSync(file, "utf8")).toBe("left over\n");
+    });
+
+    test("throws on a description recorded twice", async () => {
+      reply = answer(BENIGN);
+      await new GuardedGatewayProvider().callApi(prompt, ctx("rate"));
+      await expect(new GuardedGatewayProvider().callApi(prompt, ctx("rate"))).rejects.toThrow("recorded twice");
+      expect(lines().length).toBe(1);
+    });
+
+    test.each([
+      ["no context", undefined],
+      ["an empty description", ctx("")],
+      ["a non-string description", ctx(7)],
+    ])("throws with %s before any request", async (_name, context) => {
+      lastRequest = undefined;
+      await expect(new GuardedGatewayProvider().callApi(prompt, context)).rejects.toThrow("no test description");
+      expect(lastRequest).toBeUndefined();
+    });
   });
 });

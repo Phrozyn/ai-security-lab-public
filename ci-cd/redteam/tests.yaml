@@ -1,6 +1,6 @@
 # Shared by the gate suite (promptfooconfig.yaml, real RAG system prompt, app
-# leak guard applied), the model suite (promptfooconfig.model.yaml, same prompt,
-# no guard) and the baseline probe (promptfooconfig.baseline.yaml, bare minimal
+# leak guard applied), the model suite (promptfooconfig.model.yaml, the gate
+# run's raw answers, no guard) and the baseline probe (promptfooconfig.baseline.yaml, bare minimal
 # prompt).
 # Deterministic string assertions only -- no LLM-as-judge.
 

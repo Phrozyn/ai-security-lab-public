@@ -16,7 +16,7 @@ description: ai-security-lab gateway red-team gate (RAG system prompt, app leak 
 
 providers:
   # Model, temperature 0 and max_tokens 1600 are set in the provider; see the
-  # max_tokens comment in promptfooconfig.model.yaml.
+  # MAX_TOKENS comment there.
   - id: file://guarded-gateway-provider.ts
     label: local-gemma via gateway + app leak guard
 

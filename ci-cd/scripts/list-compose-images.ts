@@ -1,5 +1,5 @@
 // Single source of truth for which container images CI scans: the compose file
-// itself. Prints the image refs as a JSON array (consumed as the supply-chain
+// itself (the gateway). Prints the image refs as a JSON array (consumed as the supply-chain
 // job's matrix) and FAILS when:
 //   - a runtime image declaration is not a static string pinned by sha256 digest.
 //     Runtime declarations are compose services.*.image and, in workflows,
@@ -156,11 +156,18 @@ export function checkImages(composeImages: string[], workflowImages: { file: str
 
 if (import.meta.main) {
   const root = resolve(import.meta.dir, "../..");
-  const composeFile = "gateway/docker-compose.yml";
-  const compose = declaredImages(readFileSync(resolve(root, composeFile), "utf8"), composeFile, "compose");
-  if (compose.images.length + compose.errors.length < 2) {
-    throw new Error(`expected >=2 images in compose, found ${compose.images.length + compose.errors.length}`);
-  }
+  // Each compose file and the minimum number of images it declares.
+  const composeFiles: [string, number][] = [
+    ["gateway/docker-compose.yml", 2],
+  ];
+  const perFile = composeFiles.map(([file, min]) => {
+    const r = declaredImages(readFileSync(resolve(root, file), "utf8"), file, "compose");
+    if (r.images.length + r.errors.length < min) {
+      throw new Error(`expected >=${min} images in ${file}, found ${r.images.length + r.errors.length}`);
+    }
+    return r;
+  });
+  const compose = { images: perFile.flatMap((r) => r.images), errors: perFile.flatMap((r) => r.errors) };
 
   const workflowDir = resolve(root, ".github/workflows");
   const files = readdirSync(workflowDir).filter((f) => /\.ya?ml$/.test(f)).sort();

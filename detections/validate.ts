@@ -32,7 +32,7 @@ function loadFixture(relPath: string): any[] {
     .map((l) => JSON.parse(l));
 }
 
-// Supports exactly the field-matching styles these 7 rules use: plain
+// Supports exactly the field-matching styles these 8 rules use: plain
 // equality (scalar expected against a scalar OR list field -- Sigma's own
 // semantics are "any element of a list field equals"), |contains and
 // |startswith on string fields, and OR-lists as the expected value. Anything

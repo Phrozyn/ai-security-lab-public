@@ -14,6 +14,7 @@ Portfolio repo demonstrating AI/ML security engineering practices: LLM gateway h
 | [`detections/`](detections/) | **Built & verified** | 8 Sigma detection rules for the gateway and RAG app logs, proven against captured fixtures and independently cross-checked with `pySigma`. See `detections/README.md`. |
 | [`docs/`](docs/) | **Done** | [Threat model](docs/threat-model.md) (OWASP LLM Top 10 + MITRE ATLAS against the deployed system), [model cards](docs/model-cards.md) (every model in use), and [data card](docs/data-card.md) (synthetic RAG corpus + both audit-log streams), and the [distributed-intent detection design](docs/distributed-intent-detection.md) with its [composition function specification](docs/composition-function.md) (design; nothing deployed). |
 | [`intent/`](intent/) | **Design + reference** | Executable reference for the composition function of the distributed-intent design: property checks P1 to P22 with negative controls, and a mutation harness in which each mutant must fail a named property. Nothing deployed. |
+| [`observability/`](observability/) | **Output format** | The distributed-intent detection output is OCSF 1.9.0 JSON lines (Detection Finding, Application Error, Application Lifecycle), readable by a SIEM or event viewer that ingests JSON lines. The emitter and the lab's log stack are not published. |
 
 ## Deploy target: LLM_HOST
 

@@ -27,11 +27,13 @@ jobs:
         with:
           persist-credentials: false
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: "1.4.3"
       # uv, pinned by version and archive checksum, creates a per-job virtual environment in
       # RUNNER_TEMP (removed with the job) from a host Python 3.12, or from a uv-managed build
       # when the host has none. setup-python downloads only builds for the platforms in its
       # manifest, which does not cover every self-hosted runner.
-      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           version: "0.12.22"
           checksum: "b9980552309f09c15172b8be828555e375097f16deb459795ce7bfd200380f0b"
@@ -64,11 +66,13 @@ jobs:
         with:
           persist-credentials: false
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: "1.4.3"
       # uv, pinned by version and archive checksum, creates a per-job virtual environment in
       # RUNNER_TEMP (removed with the job) from a host Python 3.12, or from a uv-managed build
       # when the host has none. setup-python downloads only builds for the platforms in its
       # manifest, which does not cover every self-hosted runner.
-      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           version: "0.12.22"
           checksum: "b9980552309f09c15172b8be828555e375097f16deb459795ce7bfd200380f0b"
@@ -113,11 +117,13 @@ jobs:
         with:
           persist-credentials: false
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: "1.4.3"
       # uv, pinned by version and archive checksum, creates a per-job virtual environment in
       # RUNNER_TEMP (removed with the job) from a host Python 3.12, or from a uv-managed build
       # when the host has none. setup-python downloads only builds for the platforms in its
       # manifest, which does not cover every self-hosted runner.
-      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           version: "0.12.22"
           checksum: "b9980552309f09c15172b8be828555e375097f16deb459795ce7bfd200380f0b"
@@ -150,6 +156,8 @@ jobs:
         with:
           persist-credentials: false
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: "1.4.3"
       - id: list
         run: bun ci-cd/scripts/list-compose-images.ts
       - name: Image policy check tests
@@ -282,11 +290,13 @@ jobs:
         with:
           persist-credentials: false
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: "1.4.3"
       # uv, pinned by version and archive checksum, creates a per-job virtual environment in
       # RUNNER_TEMP (removed with the job) from a host Python 3.12, or from a uv-managed build
       # when the host has none. setup-python downloads only builds for the platforms in its
       # manifest, which does not cover every self-hosted runner.
-      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           version: "0.12.22"
           checksum: "b9980552309f09c15172b8be828555e375097f16deb459795ce7bfd200380f0b"
@@ -334,6 +344,8 @@ jobs:
         with:
           persist-credentials: false
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: "1.4.3"
       # promptfoo must run under Node.js: via bunx on a host without Node it
       # falls back to Bun's runtime, which lacks undici's interceptors.decompress.
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -341,7 +353,7 @@ jobs:
           node-version: "24"
       # The gate's leak-guard check (ci-cd/redteam/leakguard_gate.py) needs a
       # Python 3 with the standard library only. Same pinned uv as the other jobs.
-      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           version: "0.12.22"
           checksum: "b9980552309f09c15172b8be828555e375097f16deb459795ce7bfd200380f0b"

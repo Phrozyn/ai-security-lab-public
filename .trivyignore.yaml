@@ -26,3 +26,6 @@ vulnerabilities:
     statement: "Go stdlib crypto/tls in the bundled gosu binary; gosu makes no TLS connections (privilege-drop at start only). Fixed upstream in Go 1.24.13, image not yet rebuilt."
     expired_at: 2026-11-04
 
+  - id: GHSA-6q48-6c7w-9gw2
+    statement: "certifi before 2026.10.19 in the upstream litellm image (/app/.venv and /opt/liteadmin) trusts emSign ECC Root CA - G3. gateway/docker-compose.yml mounts the host CA bundle over both certifi bundles and sets SSL_CERT_FILE and REQUESTS_CA_BUNDLE to it. Upstream has not rebuilt with certifi 2026.10.19."
+    expired_at: 2026-11-04

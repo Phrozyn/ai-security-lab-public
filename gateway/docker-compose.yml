@@ -55,8 +55,18 @@ services:
       # LiteLLM connects as the non-superuser gateway_app role (gateway/sql/gateway-role.sql),
       # not as the Postgres bootstrap superuser in POSTGRES_USER.
       DATABASE_URL: postgresql://${GATEWAY_DB_USER:?set GATEWAY_DB_USER in .env}:${GATEWAY_DB_PASSWORD:?set GATEWAY_DB_PASSWORD in .env}@127.0.0.1:5432/${POSTGRES_DB:-litellm}
+      # CA trust comes from the host bundle mounted below, not from the image.
+      # certifi before 2026.10.19 trusts emSign ECC Root CA - G3
+      # (GHSA-6q48-6c7w-9gw2). litellm's httpx clients read SSL_CERT_FILE,
+      # requests reads REQUESTS_CA_BUNDLE, and the last two mounts replace the
+      # bundles that certifi.where() returns in the image's two venvs.
+      SSL_CERT_FILE: /etc/ssl/trust/ca-certificates.crt
+      REQUESTS_CA_BUNDLE: /etc/ssl/trust/ca-certificates.crt
     volumes:
       - ./litellm_config.yaml:/app/config.yaml:ro
+      - ${TRUST_BUNDLE:-/etc/ssl/certs/ca-certificates.crt}:/etc/ssl/trust/ca-certificates.crt:ro
+      - ${TRUST_BUNDLE:-/etc/ssl/certs/ca-certificates.crt}:/app/.venv/lib/python3.13/site-packages/certifi/cacert.pem:ro
+      - ${TRUST_BUNDLE:-/etc/ssl/certs/ca-certificates.crt}:/opt/liteadmin/lib/python3.13/site-packages/certifi/cacert.pem:ro
     command:
       ["--config", "/app/config.yaml", "--port", "${LITELLM_PORT:-4000}", "--host", "${LITELLM_BIND_ADDR:-127.0.0.1}"]
     healthcheck:

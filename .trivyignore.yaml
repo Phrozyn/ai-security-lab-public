@@ -3,25 +3,34 @@
 # again, forcing a re-review instead of letting an exception rot.
 #
 # Scope: all four are in the upstream `pgvector/pgvector:pg16` image (Debian 12
-# perl packages and the bundled gosu binary), NOT in code this repo ships. The
-# fix exists upstream (Debian 5.36.0-7+deb12u4; Go stdlib 1.24.13+) but the
-# image has not been rebuilt yet. Mitigations: the container is loopback-bound
-# only (gateway/docker-compose.yml), Postgres does not invoke perl on any
-# request path, and gosu only runs once at container start.
-# Re-verified 2026-10-05 (Trivy 0.75.0, remote scan): the NEWER digest 7b822b0a...
-# carries the identical set, so bumping gains nothing until upstream rebuilds.
-# Action when it expires: re-pull the image; if a rebuilt tag is out, delete the
-# entries; if not, re-assess and extend with a new written justification.
+# perl packages and the bundled gosu binary), NOT in code this repo ships.
+# Mitigations: the container is loopback-bound only (gateway/docker-compose.yml),
+# Postgres does not invoke perl on any request path, and gosu only runs once at
+# container start.
+#
+# Re-verified 2026-10-26 against the pinned digest ccc6e83d... (0.8.6), the
+# newest pg16 digest 7b822b0a... (0.8.7, built 2026-10-01) and the official
+# postgres:16-bookworm image of 2026-10-21:
+# - perl: both pgvector digests carry 5.36.0-7+deb12u3. Debian ships the fix in
+#   deb12u4, and postgres:16-bookworm carries it. pgvector builds FROM
+#   postgres:16-bookworm and rebuilds only on a pgvector release, so the next
+#   release clears these three. Short expiry.
+# - gosu: 1.19 built with go1.24.6 in every image checked, including the
+#   official postgres image. gosu 1.20 (2026-10-25) is also built with go1.24.6.
+#   The CVE is in crypto/tls; gosu makes no TLS connections. Longer expiry.
+# Action when one expires: check the newest pgvector pg16 digest; if the
+# finding is gone, re-pin (Postgres restart, dump first) and delete the entry;
+# if not, re-assess and extend with a new written justification.
 vulnerabilities:
   - id: CVE-2026-13221
-    statement: "Debian perl packages in upstream pgvector image; fixed in deb12u4, image not yet rebuilt. Loopback-only, perl not on request path."
-    expired_at: 2026-11-04
+    statement: "Debian perl packages in upstream pgvector image (deb12u3); fixed in deb12u4, present in postgres:16-bookworm, pgvector not yet rebuilt. Loopback-only, perl not on request path."
+    expired_at: 2026-12-04
   - id: CVE-2026-42496
-    statement: "perl-archive-tar in upstream pgvector image; fixed in deb12u4, image not yet rebuilt. Not reachable from a loopback-only Postgres."
-    expired_at: 2026-11-04
+    statement: "perl-archive-tar in upstream pgvector image (deb12u3); fixed in deb12u4, pgvector not yet rebuilt. Not reachable from a loopback-only Postgres."
+    expired_at: 2026-12-04
   - id: CVE-2026-8376
-    statement: "perl heap overflow in upstream pgvector image; fixed in deb12u4, image not yet rebuilt. Perl is not invoked at runtime."
-    expired_at: 2026-11-04
+    statement: "perl heap overflow in upstream pgvector image (deb12u3); fixed in deb12u4, pgvector not yet rebuilt. Perl is not invoked at runtime."
+    expired_at: 2026-12-04
   - id: CVE-2025-68121
-    statement: "Go stdlib crypto/tls in the bundled gosu binary; gosu makes no TLS connections (privilege-drop at start only). Fixed upstream in Go 1.24.13, image not yet rebuilt."
-    expired_at: 2026-11-04
+    statement: "Go stdlib crypto/tls in the bundled gosu binary (1.19, go1.24.6); gosu makes no TLS connections (privilege drop at start only). gosu 1.20 and the official postgres image use the same Go version; no upstream build has the fix (Go 1.24.13+)."
+    expired_at: 2027-01-26

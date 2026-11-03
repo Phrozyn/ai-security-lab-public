@@ -30,7 +30,7 @@ services:
       - "127.0.0.1:5432:5432"
 
   litellm:
-    image: ghcr.io/berriai/litellm:main-stable@sha256:c169fb3adc514fcf210377c203f3de406d54f10bfdacf13948a4a839db9af7de
+    image: ghcr.io/berriai/litellm:main-stable@sha256:37e2dafb088a7723beb998590682957386dfc83ffea1848486f8e0e5cfac0b06
     restart: unless-stopped
     depends_on:
       postgres:

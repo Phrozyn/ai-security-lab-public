@@ -14,12 +14,28 @@
       "note": "Locked to the version deployed on LLM_HOST (pulled 2026-09-29). The upstream tag has since moved; registry served b37049369adfe3d2b653af0ab301a062ca5cbe96ace6aa0d3f2559ee9b563fc2 on 2026-10-05."
     },
     {
-      "name": "qwen3.8:latest",
-      "manifest_sha256": "22130167c4c20e20c7b71454612966ca8e8171e9b3cc8ab6ce8aa6cbfec79643",
+      "name": "gemma4:e4b",
+      "manifest_sha256": "dc35e8d9c6061baa6f0fa870975ab6932e2542b579b13ea0f199fa4bb7300c9c",
+      "used_by": [
+        "gateway route local-gemma-e4b"
+      ],
+      "note": "Locked to the version deployed on LLM_HOST (digest read from /api/tags on 2026-11-05)."
+    },
+    {
+      "name": "qwen3.5:9b",
+      "manifest_sha256": "56671c2ab9385f9cfcb404638e32cd62d88e3501d44822208363c010179a3c90",
       "used_by": [
         "gateway route local-qwen"
       ],
-      "note": "Locked to the version deployed on LLM_HOST (pulled 2026-09-29). The upstream tag has since moved; registry served aaee06c39dcf2437cde036998d960e1fc1494b8191be7cc9657d01e509097813 on 2026-10-05."
+      "note": "Locked to the version deployed on LLM_HOST (pulled 2026-11-04). Replaces qwen3.8, which did not fit the host GPU and was removed from LLM_HOST."
+    },
+    {
+      "name": "deepseek-r1:14b",
+      "manifest_sha256": "c333b7232bdb521236694ffbb5f5a6b11cc45d98e9142c73123b670fca400b09",
+      "used_by": [
+        "gateway route local-deepseek"
+      ],
+      "note": "Locked to the version deployed on LLM_HOST (pulled 2026-11-05). Replaces deepseek-v3, which did not fit the host GPU and was removed from LLM_HOST."
     },
     {
       "name": "llama-guard3:latest",
@@ -36,5 +52,5 @@
       ]
     }
   ],
-  "verified_against_live": "2026-10-05 via ci-cd/scripts/verify-models.ts (4/4 locked models match; deepseek-v3 is served but intentionally unlocked/unrouted)"
+  "verified_against_live": "2026-11-05: digests compared by hand against LLM_HOST /api/tags (6/6 locked models match). Every model LLM_HOST serves is locked."
 }

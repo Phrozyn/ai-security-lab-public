@@ -28,7 +28,7 @@ done
 # stay inside the key_alias string.
 PAYLOAD=$(jq -n --arg alias "$CALLER_NAME" '{
   key_alias: $alias,
-  models: ["local-gemma", "local-qwen"],
+  models: ["local-gemma", "local-gemma-e4b", "local-qwen", "local-deepseek"],
   rpm_limit: 30,
   tpm_limit: 20000,
   max_budget: 5.0,

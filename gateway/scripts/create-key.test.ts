@@ -45,7 +45,7 @@ describe("create-key.sh", () => {
     expect(received[0].auth).toBe(`Bearer ${MASTER}`);
     expect(received[0].body).toEqual({
       key_alias: "alice",
-      models: ["local-gemma", "local-qwen"],
+      models: ["local-gemma", "local-gemma-e4b", "local-qwen", "local-deepseek"],
       rpm_limit: 30,
       tpm_limit: 20000,
       max_budget: 5,

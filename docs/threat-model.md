@@ -9,7 +9,7 @@ caller --[virtual key]--> LiteLLM gateway (tailnet address <LLM_HOST tailnet IP>
                                |
                                +--> Postgres (127.0.0.1:5432): virtual keys, spend logs
                                |
-                               +--> Ollama (tailnet address <LLM_HOST tailnet IP>:11434): gemma4:e2b, qwen3.8, deepseek-v3
+                               +--> Ollama (tailnet address <LLM_HOST tailnet IP>:11434): gemma4:e2b, qwen3.5:9b, gemma4:e4b, deepseek-r1:14b
 ```
 
 Postgres is loopback-bound. The gateway and Ollama are bound to LLM_HOST's Tailscale address only (changed 2026-10-06 so the CI runner `CI_RUNNER` can reach them for the live red-team); they are not bound to `0.0.0.0` or the LAN. Tailscale ACLs allow `tag:ci` (the CI runner) and `tag:admin` (the maintainer's devices) to reach `tag:llm-host` on ports 4000 and 11434 only. **Ollama has no authentication of its own**, so on the tailnet its protection is that ACL, not a key: any node the ACL admits to 11434 can use models and embeddings directly, bypassing the gateway's virtual-key limits. A probe from LAN machines outside the tailnet found both ports unreachable (maintainer check, 2026-10-06); the earlier loopback-only probe (2026-09-29) covered the previous bindings. SSH to LLM_HOST is key-only, no passwordless sudo.

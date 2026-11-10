@@ -15,7 +15,21 @@ Covers every model the deployed system calls, not a survey of what Ollama can ru
 | **Out-of-scope use** | Anything requiring guaranteed factual accuracy, safety-critical decisions, or handling of non-synthetic sensitive data, the RAG corpus is synthetic test data (see `data-card.md`), and nothing here has been evaluated against real PII or business-sensitive content. |
 | **Known limitations** | Hallucination is out of scope for this system to mitigate (see `threat-model.md`, LLM09); no fact-checking or citation-grounding is layered on top of raw generation. `e2b` (~2B effective params) trades capability for being able to fit the host GPU's VRAM alongside the embedding and guardrail models running on the same box. |
 | **Evaluation** | No formal benchmark run. Behavioral evidence only: `rag-app/README.md` test #4 shows the model correctly refusing to act on an injected instruction embedded in retrieved context, and correctly answering only the asked question, see that doc for the exact transcript. This is one observed data point, not a systematic robustness evaluation. |
-| **Resource footprint** | Selected because it fits alongside `nomic-embed-text` and `llama-guard3` in the host GPU's VRAM; `deepseek-v3` (404GB) is excluded from the gateway's routes for this reason (see comment in `litellm_config.yaml`). |
+| **Resource footprint** | Selected because it fits alongside `nomic-embed-text` and `llama-guard3` in the host GPU's VRAM; models that do not fit are not routed (see comment in `litellm_config.yaml`). |
+
+---
+
+## local-gemma-e4b (generation, larger gemma route)
+
+| | |
+|---|---|
+| **Model** | `gemma4:e4b` via Ollama, routed through the gateway as `local-gemma-e4b` (added 2026-11-05) |
+| **Role in system** | Generation route on the gateway, available to any caller with a virtual key, not used by the RAG app, which is hardcoded to `local-gemma` (`gemma4:e2b`) via `GENERATION_MODEL`. |
+| **Provider** | Google, pulled from Ollama's public registry, not fine-tuned, not modified |
+| **Intended use** | The larger sibling of `local-gemma` on the same virtual-key auth, rate limits, and audit logging, for callers comparing model sizes. |
+| **Out-of-scope use** | Same constraints as `local-gemma` above, portfolio/demo traffic only. |
+| **Known limitations** | Uses 6.6 GB of the host GPU's 12 GB. Not exercised by any live test suite; no behavioral evaluation has been run against this route. |
+| **Evaluation** | Measured 173 tokens/s decode on LLM_HOST, 100% GPU (2026-11-05). No behavioral evaluation. |
 
 ---
 
@@ -23,13 +37,27 @@ Covers every model the deployed system calls, not a survey of what Ollama can ru
 
 | | |
 |---|---|
-| **Model** | `qwen3.8` via Ollama, routed through the gateway as `local-qwen` |
+| **Model** | `qwen3.5:9b` via Ollama, routed through the gateway as `local-qwen` (replaced `qwen3.8` on 2026-11-04, which did not fit the host GPU) |
 | **Role in system** | Second generation route on the gateway, available to any caller with a virtual key, not currently used by the RAG app, which is hardcoded to `local-gemma` via `GENERATION_MODEL`. |
 | **Provider** | Alibaba, pulled from Ollama's public registry, not fine-tuned, not modified |
 | **Intended use** | Demonstrates the gateway's multi-model routing (`model_list` in `litellm_config.yaml`) rather than serving a distinct product need. A caller can request it by name through the same virtual-key auth, rate limits, and audit logging as `local-gemma`. |
 | **Out-of-scope use** | Same constraints as `local-gemma` above, portfolio/demo traffic only. |
 | **Known limitations** | Not exercised by any of the live test suites in `gateway/README.md` or `rag-app/README.md` beyond basic routing; no behavioral evaluation has been run against this specific route. |
 | **Evaluation** | None beyond confirming the route resolves and responds through the gateway. |
+
+---
+
+## local-deepseek (generation, reasoning route)
+
+| | |
+|---|---|
+| **Model** | `deepseek-r1:14b` via Ollama, routed through the gateway as `local-deepseek` (added 2026-11-05; replaces `deepseek-v3`, which did not fit the host GPU and was never routed) |
+| **Role in system** | Third generation route on the gateway, available to any caller with a virtual key, not used by the RAG app, which is hardcoded to `local-gemma` via `GENERATION_MODEL`. |
+| **Provider** | DeepSeek, distilled onto a Qwen base, pulled from Ollama's public registry, not fine-tuned, not modified |
+| **Intended use** | A reasoning model on the same virtual-key auth, rate limits, and audit logging as `local-gemma`. Answers include the model's reasoning text before the final answer. |
+| **Out-of-scope use** | Same constraints as `local-gemma` above, portfolio/demo traffic only. |
+| **Known limitations** | The reasoning text counts toward `tpm_limit` and the nominal budget, so a call uses more tokens than the visible answer. Uses 9.5 GB of the host GPU's 12 GB, so it does not stay loaded alongside another generation model and a switch reloads it (about 6 s). Not exercised by any live test suite; no behavioral evaluation has been run against this route. |
+| **Evaluation** | Measured 64 tokens/s decode on LLM_HOST, 100% GPU (2026-11-05). No behavioral evaluation. |
 
 ---
 

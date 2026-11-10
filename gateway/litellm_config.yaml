@@ -1,9 +1,7 @@
 # LiteLLM proxy config. Full schema: https://docs.litellm.ai/docs/proxy/configs
 #
 # Routes match what's pulled on LLM_HOST (confirmed via `ssh LLM_HOST ollama list`).
-# deepseek-v3 (404GB) is excluded from routing; it doesn't fit the
-# host GPU's VRAM and would run almost entirely off system RAM; add it back as a
-# route if you want to serve it slowly.
+# Routed models fit the host GPU's 12GB VRAM.
 
 model_list:
   - model_name: local-gemma
@@ -16,9 +14,21 @@ model_list:
       # budget has something to sum against, not dollar costs.
       input_cost_per_token: 0.0000005
       output_cost_per_token: 0.0000015
+  - model_name: local-gemma-e4b
+    litellm_params:
+      model: ollama/gemma4:e4b
+      api_base: os.environ/OLLAMA_BASE_URL
+      input_cost_per_token: 0.0000005
+      output_cost_per_token: 0.0000015
   - model_name: local-qwen
     litellm_params:
-      model: ollama/qwen3.8
+      model: ollama/qwen3.5:9b
+      api_base: os.environ/OLLAMA_BASE_URL
+      input_cost_per_token: 0.0000005
+      output_cost_per_token: 0.0000015
+  - model_name: local-deepseek
+    litellm_params:
+      model: ollama/deepseek-r1:14b
       api_base: os.environ/OLLAMA_BASE_URL
       input_cost_per_token: 0.0000005
       output_cost_per_token: 0.0000015

@@ -33,7 +33,7 @@ jobs:
       # RUNNER_TEMP (removed with the job) from a host Python 3.12, or from a uv-managed build
       # when the host has none. setup-python downloads only builds for the platforms in its
       # manifest, which does not cover every self-hosted runner.
-      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           version: "0.12.22"
           checksum: "b9980552309f09c15172b8be828555e375097f16deb459795ce7bfd200380f0b"
@@ -72,7 +72,7 @@ jobs:
       # RUNNER_TEMP (removed with the job) from a host Python 3.12, or from a uv-managed build
       # when the host has none. setup-python downloads only builds for the platforms in its
       # manifest, which does not cover every self-hosted runner.
-      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           version: "0.12.22"
           checksum: "b9980552309f09c15172b8be828555e375097f16deb459795ce7bfd200380f0b"
@@ -123,7 +123,7 @@ jobs:
       # RUNNER_TEMP (removed with the job) from a host Python 3.12, or from a uv-managed build
       # when the host has none. setup-python downloads only builds for the platforms in its
       # manifest, which does not cover every self-hosted runner.
-      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           version: "0.12.22"
           checksum: "b9980552309f09c15172b8be828555e375097f16deb459795ce7bfd200380f0b"
@@ -296,7 +296,7 @@ jobs:
       # RUNNER_TEMP (removed with the job) from a host Python 3.12, or from a uv-managed build
       # when the host has none. setup-python downloads only builds for the platforms in its
       # manifest, which does not cover every self-hosted runner.
-      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           version: "0.12.22"
           checksum: "b9980552309f09c15172b8be828555e375097f16deb459795ce7bfd200380f0b"
@@ -353,7 +353,7 @@ jobs:
           node-version: "24"
       # The gate's leak-guard check (ci-cd/redteam/leakguard_gate.py) needs a
       # Python 3 with the standard library only. Same pinned uv as the other jobs.
-      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           version: "0.12.22"
           checksum: "b9980552309f09c15172b8be828555e375097f16deb459795ce7bfd200380f0b"

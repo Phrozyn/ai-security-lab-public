@@ -28,7 +28,8 @@ Instructions for AI coding agents and reviewers working in this repository. Huma
 ├── detections/         Sigma rules for gateway and RAG app logs
 │   ├── rules/                 8 rules
 │   ├── samples/               captured log fixtures
-│   └── validate.ts            replays fixtures against the rules
+│   ├── validate.ts            replays fixtures against the rules
+│   └── check-technique-ids.ts ATT&CK and ATLAS IDs against pinned MITRE data
 ├── docs/               threat model, model cards, data card
 ├── .github/            ci.yml (SHA-pinned actions), dependabot.yml, actionlint.yaml
 └── .trivyignore.yaml   dated, time-boxed vulnerability exceptions
@@ -41,7 +42,8 @@ Commands (run from the repository root):
 | Purpose | Command |
 |---------|---------|
 | Validate detection rules against fixtures | `bun detections/validate.ts` |
-| Check rules with the Sigma reference implementation | `pipx run sigma-cli check detections/rules/` |
+| Check rules with the Sigma reference implementation | `pipx run sigma-cli check --fail-on-error --fail-on-issues detections/rules/` |
+| Check ATT&CK tags and ATLAS IDs against pinned MITRE data | `bun detections/check-technique-ids.ts` and `bun test detections/check-technique-ids.test.ts` |
 | RAG app unit tests | `python -m pip install --require-hashes -r rag-app/requirements-lock.txt`, `python -m pip install --no-deps -e rag-app`, then `python -m unittest discover -s rag-app/tests -v` |
 | ACL and privilege harness | `bun ci-cd/acl-redteam/harness.ts` (needs Postgres with pgvector, a superuser `RAGAPP_DATABASE_URL`, and `psql` 15+ or `RAGAPP_PG_CONTAINER`) |
 | Red-team prompt drift checks | `bun ci-cd/redteam/sync-prompt.ts --check` and `bun ci-cd/redteam/sync-guardrail-prompt.ts --check` |

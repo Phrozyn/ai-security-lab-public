@@ -25,3 +25,5 @@ falsepositives:
   - A client retry loop hammering the gateway with the same stale key instead of backing off
 tags:
   - attack.credential-access
+  - attack.t1110
+x-atlas: []

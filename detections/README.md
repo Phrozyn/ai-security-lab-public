@@ -17,6 +17,9 @@ detections/
   validate.ts bun-run test harness: schema check + fires every rule's
               detection logic against its fixtures (true-positive AND
               true-negative), run it with: bun detections/validate.ts
+  check-technique-ids.ts
+              checks the ATT&CK tags and ATLAS IDs of these rules against
+              MITRE data pinned by commit and SHA-256
 ```
 
 ## Rules
@@ -82,6 +85,38 @@ Every positive fixture came from running the deployed system:
   `key=` in each line is LiteLLM's own SHA-256 hash of the invalid token
   presented, not a live credential, and not reversible to one.
 
+## Technique mapping
+
+ATT&CK IDs are Sigma tags (`attack.t1110`). ATLAS IDs are in `x-atlas`, because
+Sigma's tag namespaces are fixed and pySigma's `namespace_tag` validator refuses
+`atlas.*`. Every rule has an `x-atlas` key; `x-atlas: []` means no ATLAS technique
+applies.
+
+| Rule | ATT&CK (Enterprise 20.1) | ATLAS (2026.10) | Reason |
+|------|--------------------------|-----------------|--------|
+| `gateway_auth_failure.yml` | T1110 Brute Force | none | A rejected bearer token is one guess at a key. ATLAS has no brute-force technique. |
+| `gateway_repeated_auth_failures.yml` | T1110 Brute Force | none | Several rejected tokens from one source in 5 minutes. |
+| `gateway_admin_endpoint_abuse.yml` | T1098.001 Additional Cloud Credentials | none | `/key/generate` and `/key/update` create or change gateway credentials. Tactics: persistence, privilege-escalation. |
+| `gateway_completion_request.yml` | none | AML.T0040 AI Model Inference API Access | Base rule: every completion call is inference API access. Not an alert. |
+| `gateway_high_volume_completions.yml` | T1496.004 Cloud Service Hijacking | AML.T0024 Exfiltration via AI Inference API, AML.T0034.000 Excessive Queries | ATT&CK names LLMjacking under T1496.004. The exfiltration tactic tag stays for the bulk-extraction case; ATT&CK has no technique for it. |
+| `ragapp_injection_doc_retrieved.yml` | none | AML.T0051.001 LLM Prompt Injection: Indirect, AML.T0070 RAG Poisoning | ATT&CK has no prompt-injection technique; the `attack.initial-access` tactic tag is kept from the original rule. |
+| `ragapp_input_guardrail_blocked.yml` | none | AML.T0051.000 LLM Prompt Injection: Direct, AML.T0054 LLM Jailbreak | Llama Guard flags unsafe input; the two techniques are what such input attempts. |
+| `ragapp_unknown_user_attempt.yml` | T1087 Account Discovery | none | A query under a username outside the ACL map, the account enumeration case in the rule description. |
+
+`bun detections/check-technique-ids.ts` downloads ATT&CK Enterprise 20.1 (STIX bundle)
+and ATLAS 2026.10 (YAML) from URLs pinned to a commit, refuses data whose SHA-256
+differs from the pinned value, and fails when:
+
+- an `attack.tNNNN` tag is not an active (not revoked, not deprecated) technique;
+- a technique tag shares no tactic with the tactic tags on the same rule;
+- a tactic tag is not an active ATT&CK tactic;
+- an `x-atlas` entry is not an `AML.T` ID in ATLAS, or is listed twice;
+- a rule has no `x-atlas` key;
+- a rule in `detections/rules/` has no technique ID at all.
+
+`--attack <file>` and `--atlas <file>` read local copies, with the same hash check.
+`--optional-rules <dir>` adds a rule directory whose rules may carry no technique ID.
+
 ## Independent validation against Sigma tooling
 
 `validate.ts` is this project's own harness, useful for fixture-replay
@@ -91,7 +126,7 @@ To check that independently, all 8 rules were also run through
 nothing added to this repo or installed permanently):
 
 ```bash
-pipx run sigma-cli check detections/rules/
+pipx run sigma-cli check --fail-on-error --fail-on-issues detections/rules/
 # => Found 0 errors, 0 condition errors and 0 issues.
 ```
 
@@ -147,10 +182,11 @@ named rather than left implicit:
   points for this lab's low-traffic demo corpus, not production-tuned
   baselines; a production deployment derives thresholds from observed baseline
   traffic.
-- No ATT&CK/ATLAS technique IDs are cited anywhere in these rules. Tactic-
-  level `tags:` (e.g. `attack.exfiltration`) are used where confident;
-  specific technique IDs are left out rather than guessed, matching the
-  discipline established in `docs/threat-model.md`.
+- Technique IDs are checked against one ATT&CK and one ATLAS release. A new
+  MITRE release changes nothing here until the pins in
+  `check-technique-ids.ts` are moved; pySigma's `attacktag` validator in CI
+  reads the current ATT&CK release, so a technique MITRE revokes fails that
+  check first.
 - `validate.ts` is a scoped Sigma-subset evaluator (plain equality incl.
   Sigma's list-field "any element equals" semantics, `|contains` and
   `|startswith` on string fields, OR-lists, plus `event_count` correlation)

@@ -31,3 +31,5 @@ falsepositives:
   - A client that hasn't picked up a just-rotated key yet
 tags:
   - attack.credential-access
+  - attack.t1110
+x-atlas: []

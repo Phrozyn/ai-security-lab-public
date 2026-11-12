@@ -26,3 +26,5 @@ falsepositives:
   - A valid username added to a caller's config before users.yaml was updated to match
 tags:
   - attack.discovery
+  - attack.t1087
+x-atlas: []

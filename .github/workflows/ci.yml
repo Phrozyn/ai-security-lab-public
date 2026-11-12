@@ -48,9 +48,17 @@ jobs:
       # on captured events; pySigma (the authoritative implementation of the
       # Sigma spec) proves the rules are valid Sigma.
       - run: bun detections/validate.ts
+      # --fail-on-issues makes pySigma's attacktag validator a gate: an ATT&CK tag that is
+      # not in the current ATT&CK release fails the job.
       - run: |
-          uv pip install --quiet sigma-cli==3.1.0
-          sigma check detections/rules/
+          uv pip install --quiet sigma-cli==3.1.0 pysigma==1.5.1
+          sigma check --fail-on-error --fail-on-issues detections/rules/
+      # ATT&CK and ATLAS IDs of the rules against MITRE data pinned by commit and SHA-256
+      # (detections/README.md, Technique mapping).
+      - name: Technique ID checker tests
+        run: bun test detections/check-technique-ids.test.ts
+      - name: Technique IDs against pinned ATT&CK and ATLAS data
+        run: bun detections/check-technique-ids.ts
 
   # ------------------------------------------------------------ workflow analysis
   # zizmor: static analysis of the workflows and .github/dependabot.yml (template injection,

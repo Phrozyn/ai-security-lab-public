@@ -31,17 +31,17 @@ Postgres is loopback-bound. The gateway and Ollama are bound to LLM_HOST's Tails
 
 ## MITRE ATLAS
 
-Tactic names below are the stable, documented ATLAS categories. Where I'd cite a specific technique ID (`AML.TXXXX`), I'm flagging that it needs to be checked against the live matrix at atlas.mitre.org rather than asserting a number from memory, getting an ID wrong in an interview is worse than not citing one.
+Tactic and technique names and IDs below are from ATLAS 2026.10. `detections/check-technique-ids.ts` checks every ID the rules carry against that release, pinned by commit and SHA-256 (`detections/README.md`, Technique mapping). Technique IDs in this table are cited only where a detection rule carries them.
 
 | Tactic | Relevance to this system | Current control |
 |--------|---------------------------|------------------|
-| Reconnaissance | Network-level scanning for the service | Mitigated: the gateway and Ollama listen on the host's Tailscale address only, and Tailscale ACLs limit which nodes can reach them, so LAN and internet scanning does not find the endpoints. Checked 2026-10-06: not reachable from LAN machines outside the tailnet. |
-| Initial Access | Reaching LLM_HOST itself | Key-only SSH, no passwordless sudo, perimeter control, not ML-specific, but it's what everything else sits behind. |
-| ML Model Access | Reaching the model without authorization | Mitigated: virtual-key auth required; verified live (invalid key → HTTP 401). Master key never leaves LLM_HOST's `.env`. |
-| Discovery | Enumerating other keys, models, or config | Admin endpoints (`/spend/logs`, `/key/*`) require the master key. Not independently verified this session whether a valid *virtual* key can enumerate anything beyond its own scope, flagged as a follow-up probe, not yet confirmed either way. |
-| Credential Access | Extracting virtual keys from Postgres | LiteLLM encrypts stored keys using `LITELLM_SALT_KEY`. The encryption mechanism itself wasn't independently verified against LiteLLM's source this session, noted as an assumption inherited from the vendor, not a self-verified guarantee. |
-| ML Attack Staging / Exfiltration | Bulk querying to extract model behavior or training-adjacent data | Rate limits and budgets bound the blast radius of a single compromised key. **Detected**, `detections/rules/gateway_high_volume_completions.yml` (component 4, built 2026-10-01) alerts on ≥30 completions from one virtual-key alias within 5 minutes, correlation-rule-verified against a 32-call burst fired at the live gateway. |
-| Impact (Denial of ML Service) | Exhausting host/GPU resources | Partially mitigated by per-key rate limits; not mitigated at the host resource level (same gap as LLM10 above). |
+| Reconnaissance (AML.TA0002) | Network-level scanning for the service | Mitigated: the gateway and Ollama listen on the host's Tailscale address only, and Tailscale ACLs limit which nodes can reach them, so LAN and internet scanning does not find the endpoints. Checked 2026-10-06: not reachable from LAN machines outside the tailnet. |
+| Initial Access (AML.TA0004) | Reaching LLM_HOST itself | Key-only SSH, no passwordless sudo, perimeter control, not ML-specific, but it's what everything else sits behind. |
+| AI Model Access (AML.TA0000) | Reaching the model without authorization | Mitigated: virtual-key auth required; verified live (invalid key → HTTP 401). Master key never leaves LLM_HOST's `.env`. |
+| Discovery (AML.TA0008) | Enumerating other keys, models, or config | Admin endpoints (`/spend/logs`, `/key/*`) require the master key. Not independently verified this session whether a valid *virtual* key can enumerate anything beyond its own scope, flagged as a follow-up probe, not yet confirmed either way. |
+| Credential Access (AML.TA0013) | Extracting virtual keys from Postgres | LiteLLM encrypts stored keys using `LITELLM_SALT_KEY`. The encryption mechanism itself wasn't independently verified against LiteLLM's source this session, noted as an assumption inherited from the vendor, not a self-verified guarantee. |
+| AI Attack Adaptation (AML.TA0001) / Exfiltration (AML.TA0010) | Bulk querying to extract model behavior or training-adjacent data | Rate limits and budgets bound the blast radius of a single compromised key. **Detected**, `detections/rules/gateway_high_volume_completions.yml` (AML.T0024 Exfiltration via AI Inference API, AML.T0034.000 Excessive Queries; ATT&CK T1496.004) (component 4, built 2026-10-01) alerts on ≥30 completions from one virtual-key alias within 5 minutes, correlation-rule-verified against a 32-call burst fired at the live gateway. |
+| Impact (AML.TA0011): Denial of AI Service | Exhausting host/GPU resources | Partially mitigated by per-key rate limits; not mitigated at the host resource level (same gap as LLM10 above). |
 
 Not applicable given current scope: any ATLAS tactic tied to training-data poisoning or model-supply-chain compromise during training; there is no training pipeline in this system.
 

@@ -25,3 +25,6 @@ falsepositives:
   - Red-team/guardrail testing of the deployed safety model (as used to generate this rule's own fixture)
 tags:
   - attack.initial-access
+x-atlas:
+  - AML.T0051.000
+  - AML.T0054

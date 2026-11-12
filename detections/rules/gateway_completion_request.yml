@@ -25,4 +25,6 @@ fields:
   - requester_ip_address
   - model_group
   - total_tokens
+x-atlas:
+  - AML.T0040
 level: informational

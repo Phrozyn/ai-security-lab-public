@@ -26,4 +26,7 @@ level: medium
 falsepositives:
   - A deploy script re-running key creation and hitting the existing-alias guard
 tags:
+  - attack.persistence
   - attack.privilege-escalation
+  - attack.t1098.001
+x-atlas: []

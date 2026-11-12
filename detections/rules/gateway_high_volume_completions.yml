@@ -27,3 +27,8 @@ falsepositives:
   - A legitimate batch job or load test using the same key
 tags:
   - attack.exfiltration
+  - attack.impact
+  - attack.t1496.004
+x-atlas:
+  - AML.T0024
+  - AML.T0034.000

@@ -31,3 +31,6 @@ falsepositives:
   - Any legitimate query that happens to retrieve this specific document -- it's tagged for review, not auto-blocked
 tags:
   - attack.initial-access
+x-atlas:
+  - AML.T0051.001
+  - AML.T0070
